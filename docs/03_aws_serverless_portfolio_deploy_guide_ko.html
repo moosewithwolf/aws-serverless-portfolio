@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AWS Serverless Portfolio 배포 이해 노트</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #667085;
+      --line: #e6eaf0;
+      --soft: #f7f9fc;
+      --accent: #2563eb;
+      --accent-soft: #eaf1ff;
+      --ok: #067647;
+      --warn: #b54708;
+      --code: #0f172a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.65;
+    }
+
+    header {
+      padding: 48px 24px 28px;
+      background: linear-gradient(180deg, #f7faff 0%, #fff 100%);
+      border-bottom: 1px solid var(--line);
+    }
+
+    main {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 80px;
+    }
+
+    h1 {
+      max-width: 1040px;
+      margin: 0 auto 12px;
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 44px 0 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      font-size: 1.55rem;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 1.08rem;
+    }
+
+    p, li { font-size: 1rem; }
+    .subtitle {
+      max-width: 1040px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .map {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .box {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--soft);
+    }
+
+    .box strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .step {
+      margin: 22px 0;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 6px 24px rgba(16, 24, 40, 0.04);
+    }
+
+    .why {
+      margin: 12px 0;
+      padding: 12px 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+      color: #1e3a8a;
+    }
+
+    .check {
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    .note {
+      color: var(--warn);
+      font-weight: 700;
+    }
+
+    code {
+      color: #1d4ed8;
+      background: #eef4ff;
+      padding: 2px 5px;
+      border-radius: 5px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    pre {
+      margin: 12px 0;
+      padding: 16px;
+      overflow-x: auto;
+      color: #d7e3ff;
+      background: var(--code);
+      border-radius: 12px;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    pre code {
+      color: inherit;
+      background: transparent;
+      padding: 0;
+    }
+
+    .comment { color: #93c5fd; }
+    .cmd { color: #f8fafc; }
+    .value { color: #bfdbfe; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--soft);
+      width: 220px;
+    }
+
+    @media (max-width: 640px) {
+      header { padding-top: 32px; }
+      main { width: min(100% - 24px, 1040px); }
+      .step { padding: 16px; }
+      th, td { display: block; width: 100%; }
+      th { border-bottom: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AWS Serverless Portfolio 배포 이해 노트</h1>
+    <p class="subtitle">서버리스 포트폴리오 배포 명령을 “어디서, 왜, 무엇을 만드는지” 중심으로 일반 예시값으로 정리한 HTML 버전.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>전체 그림</h2>
+      <div class="map">
+        <div class="box">
+          <strong>프론트</strong>
+          React build 파일을 S3에 저장하고 CloudFront로 HTTPS 제공
+        </div>
+        <div class="box">
+          <strong>도메인</strong>
+          도메인 등록기관에서 산 <code>example.com</code>를 Route 53이 관리
+        </div>
+        <div class="box">
+          <strong>백엔드</strong>
+          API Gateway가 Lambda의 <code>/health</code>, <code>/profile</code> 호출
+        </div>
+      </div>
+
+      <pre><code>사용자 브라우저
+→ https://example.com
+→ Route 53
+→ CloudFront
+→ private S3 bucket
+→ 프론트엔드 정적 파일
+
+Frontend app
+→ API Gateway
+→ Lambda</code></pre>
+    </section>
+
+    <section>
+      <h2>1. AWS CLI 프로필 설정</h2>
+      <div class="step">
+        <h3>실행 위치</h3>
+        <p>어디서 실행해도 된다.</p>
+
+        <h3>명령</h3>
+        <pre><code><span class="comment"># YOUR_AWS_PROFILE이라는 이름으로 AWS CLI 로그인 정보 저장</span>
+<span class="cmd">aws configure --profile YOUR_AWS_PROFILE</span></code></pre>
+
+        <div class="why">
+          AWS CLI가 어떤 IAM 사용자 권한으로 AWS에 접근할지 저장하기 위해서.
+        </div>
+
+        <table>
+          <tr><th>Access Key ID</th><td>IAM 유저의 access key</td></tr>
+          <tr><th>Secret Access Key</th><td>IAM 유저의 secret key</td></tr>
+          <tr><th>Default region</th><td><code>YOUR_BACKEND_REGION</code></td></tr>
+          <tr><th>Output</th><td><code>json</code></td></tr>
+        </table>
+
+        <h3>확인</h3>
+        <pre><code><span class="comment"># 현재 profile이 어떤 AWS 계정/유저로 연결되는지 확인</span>
+<span class="cmd">aws sts get-caller-identity --profile YOUR_AWS_PROFILE</span></code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 백엔드 API 배포</h2>
+      <div class="step">
+        <h3>실행 위치</h3>
+        <pre><code><span class="cmd">cd /path/to/your-serverless-portfolio/backend</span></code></pre>
+
+        <h3>명령</h3>
+        <pre><code><span class="comment"># Python 가상환경 켜기</span>
+<span class="cmd">source ../.venv/bin/activate</span>
+
+<span class="comment"># Lambda 배포 준비물 생성</span>
+<span class="cmd">sam build</span>
+
+<span class="comment"># Lambda + API Gateway를 AWS에 배포</span>
+<span class="cmd">sam deploy --guided --region YOUR_BACKEND_REGION --profile YOUR_AWS_PROFILE</span></code></pre>
+
+        <div class="why">
+          프론트엔드 앱이 호출할 서버리스 API를 만들기 위해서. 이 단계에서 API Gateway와 Lambda가 생성된다.
+        </div>
+
+        <h3>guided 입력값</h3>
+        <table>
+          <tr><th>Stack Name</th><td><code>your-portfolio-api-stack</code></td></tr>
+          <tr><th>AWS Region</th><td><code>YOUR_BACKEND_REGION</code></td></tr>
+          <tr><th>Confirm changes</th><td><code>Y</code></td></tr>
+          <tr><th>Allow IAM role creation</th><td><code>Y</code></td></tr>
+          <tr><th>Disable rollback</th><td><code>N</code></td></tr>
+          <tr><th>No authentication okay?</th><td><code>y</code></td></tr>
+          <tr><th>Deploy changeset?</th><td><code>y</code></td></tr>
+        </table>
+
+        <h3>결과</h3>
+        <p><code>PortfolioApiBaseUrl</code>이 생성됐다.</p>
+        <pre><code>https://YOUR_API_ID.execute-api.YOUR_BACKEND_REGION.amazonaws.com/Prod</code></pre>
+
+        <h3>확인</h3>
+        <pre><code><span class="cmd">curl https://YOUR_API_ID.execute-api.YOUR_BACKEND_REGION.amazonaws.com/Prod/health</span></code></pre>
+        <p class="check">정상 응답: {"status":"ok","service":"your-portfolio-api"}</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>3. Route 53 Hosted Zone 생성</h2>
+      <div class="step">
+        <h3>명령</h3>
+        <pre><code><span class="comment"># example.com의 DNS 관리 공간 생성</span>
+<span class="cmd">aws route53 create-hosted-zone \
+  --name example.com \
+  --caller-reference example-com-UNIQUE_TIMESTAMP \
+  --profile YOUR_AWS_PROFILE</span></code></pre>
+
+        <div class="why">
+          도메인 등록기관에서 산 도메인의 DNS 관리를 AWS Route 53에서 하기 위해서.
+        </div>
+
+        <h3>생성된 값</h3>
+        <table>
+          <tr><th>HostedZoneId</th><td><code>YOUR_HOSTED_ZONE_ID</code></td></tr>
+        </table>
+
+        <h3>도메인 등록기관에 등록한 네임서버</h3>
+        <pre><code>ns-XXXX.awsdns-XX.co.uk
+ns-XXXX.awsdns-XX.org
+ns-XXXX.awsdns-XX.com
+ns-XXXX.awsdns-XX.net</code></pre>
+
+        <p class="note">의미: 도메인 등록기관에게 “이제 example.com DNS 관리는 Route 53이 한다”고 알려준 것.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>4. ACM HTTPS 인증서 생성</h2>
+      <div class="step">
+        <h3>명령</h3>
+        <pre><code><span class="comment"># CloudFront에 붙일 HTTPS 인증서 요청</span>
+<span class="cmd">aws acm request-certificate \
+  --region us-east-1 \
+  --domain-name example.com \
+  --validation-method DNS \
+  --profile YOUR_AWS_PROFILE</span></code></pre>
+
+        <div class="why">
+          <code>https://example.com</code>로 접속하려면 인증서가 필요하다. CloudFront용 ACM 인증서는 <code>us-east-1</code>에 만들어야 한다.
+        </div>
+
+        <h3>인증서 ARN</h3>
+        <pre><code>arn:aws:acm:us-east-1:YOUR_ACCOUNT_ID:certificate/YOUR_CERTIFICATE_ID</code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>5. ACM DNS 검증</h2>
+      <div class="step">
+        <h3>검증 레코드 확인</h3>
+        <pre><code><span class="cmd">aws acm describe-certificate \
+  --region us-east-1 \
+  --certificate-arn arn:aws:acm:us-east-1:YOUR_ACCOUNT_ID:certificate/YOUR_CERTIFICATE_ID \
+  --profile YOUR_AWS_PROFILE \
+  --query "Certificate.DomainValidationOptions[0].ResourceRecord"</span></code></pre>
+
+        <h3>Route 53에 CNAME 추가</h3>
+        <pre><code><span class="cmd">aws route53 change-resource-record-sets \
+  --hosted-zone-id YOUR_HOSTED_ZONE_ID \
+  --profile YOUR_AWS_PROFILE \
+  --change-batch '{
+    "Changes": [{
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "_YOUR_ACM_VALIDATION_NAME.example.com.",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [{
+          "Value": "_YOUR_ACM_VALIDATION_VALUE.acm-validations.aws."
+        }]
+      }
+    }]
+  }'</span></code></pre>
+
+        <div class="why">
+          AWS가 DNS를 조회해서 이 CNAME이 있으면 “도메인 DNS를 수정할 권한이 있네”라고 판단하고 인증서를 발급한다.
+        </div>
+
+        <h3>상태 확인</h3>
+        <pre><code><span class="cmd">aws acm describe-certificate \
+  --region us-east-1 \
+  --certificate-arn arn:aws:acm:us-east-1:YOUR_ACCOUNT_ID:certificate/YOUR_CERTIFICATE_ID \
+  --profile YOUR_AWS_PROFILE \
+  --query "Certificate.Status"</span></code></pre>
+
+        <p class="check">최종 상태: ISSUED</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>6. 프론트 호스팅 인프라 생성</h2>
+      <div class="step">
+        <h3>실행 위치</h3>
+        <pre><code><span class="cmd">cd /path/to/your-serverless-portfolio</span></code></pre>
+
+        <h3>명령</h3>
+        <pre><code><span class="comment"># S3 + CloudFront + Route 53 record 생성</span>
+<span class="cmd">aws cloudformation deploy \
+  --region us-east-1 \
+  --profile YOUR_AWS_PROFILE \
+  --stack-name your-frontend-hosting-stack \
+  --template-file infra/frontend-hosting.yaml \
+  --parameter-overrides \
+    DomainName=example.com \
+    HostedZoneId=YOUR_HOSTED_ZONE_ID \
+    AcmCertificateArn=arn:aws:acm:us-east-1:YOUR_ACCOUNT_ID:certificate/YOUR_CERTIFICATE_ID</span></code></pre>
+
+        <div class="why">
+          프론트엔드 사이트를 담을 “집”을 만드는 단계다. 아직 파일 업로드가 아니라 S3 bucket, CloudFront, Route 53 alias를 만드는 작업이다.
+        </div>
+
+        <h3>생성된 값</h3>
+        <table>
+          <tr><th>BucketName</th><td><code>YOUR_FRONTEND_BUCKET_NAME</code></td></tr>
+          <tr><th>CloudFrontDistributionId</th><td><code>YOUR_CLOUDFRONT_DISTRIBUTION_ID</code></td></tr>
+          <tr><th>WebsiteUrl</th><td><code>https://example.com</code></td></tr>
+          <tr><th>CloudFrontDomainName</th><td><code>YOUR_DISTRIBUTION.cloudfront.net</code></td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>7. 프론트엔드 앱 빌드</h2>
+      <div class="step">
+        <h3>실행 위치</h3>
+        <pre><code><span class="cmd">cd /path/to/your-serverless-portfolio/frontend</span></code></pre>
+
+        <h3>명령</h3>
+        <pre><code><span class="comment"># 실제 API Gateway 주소를 프론트엔드 앱에 넣어서 production build</span>
+<span class="cmd">VITE_API_BASE_URL=https://YOUR_API_ID.execute-api.YOUR_BACKEND_REGION.amazonaws.com/Prod npm run build</span></code></pre>
+
+        <div class="why">
+          Vite는 <code>VITE_API_BASE_URL</code> 값을 빌드 시점에 JS 안에 넣는다. 그래서 실제 API 주소가 생긴 뒤 다시 빌드해야 했다.
+        </div>
+
+        <p>결과 폴더: <code>frontend/dist/</code></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>8. S3 업로드와 CloudFront 캐시 삭제</h2>
+      <div class="step">
+        <h3>S3 업로드</h3>
+        <pre><code><span class="comment"># dist 폴더 내용을 S3 bucket에 동기화</span>
+<span class="cmd">aws s3 sync dist s3://YOUR_FRONTEND_BUCKET_NAME --delete --profile YOUR_AWS_PROFILE</span></code></pre>
+
+        <div class="why">
+          빌드된 프론트엔드 정적 파일을 S3에 올려야 CloudFront가 사용자에게 보여줄 수 있다.
+        </div>
+
+        <h3>CloudFront 캐시 무효화</h3>
+        <pre><code><span class="comment"># CloudFront가 새 파일을 바로 보도록 전체 캐시 무효화</span>
+<span class="cmd">aws cloudfront create-invalidation \
+  --distribution-id YOUR_CLOUDFRONT_DISTRIBUTION_ID \
+  --paths "/*" \
+  --profile YOUR_AWS_PROFILE</span></code></pre>
+
+        <div class="why">
+          CloudFront는 이전 파일을 캐시할 수 있다. 캐시 무효화를 해야 새로 올린 프론트엔드 파일이 바로 반영된다.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>9. 최종 확인</h2>
+      <div class="step">
+        <h3>브라우저 확인</h3>
+        <pre><code>https://example.com</code></pre>
+
+        <h3>확인한 항목</h3>
+        <ul>
+          <li class="check">사이트 로드 성공</li>
+          <li class="check">API connected 표시</li>
+          <li class="check">Resume 탭 정상</li>
+          <li class="check">AI Roadmap 탭 정상</li>
+          <li class="check">브라우저 console error/warn 없음</li>
+        </ul>
+
+        <h3>API 직접 확인</h3>
+        <pre><code><span class="cmd">curl https://YOUR_API_ID.execute-api.YOUR_BACKEND_REGION.amazonaws.com/Prod/health</span></code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>기억할 핵심</h2>
+      <div class="map">
+        <div class="box">
+          <strong>SAM deploy</strong>
+          Lambda와 API Gateway를 만든다.
+        </div>
+        <div class="box">
+          <strong>Route 53</strong>
+          도메인이 어디로 갈지 정한다.
+        </div>
+        <div class="box">
+          <strong>ACM</strong>
+          HTTPS 인증서를 발급한다.
+        </div>
+        <div class="box">
+          <strong>CloudFront</strong>
+          HTTPS 입구이자 CDN이다.
+        </div>
+        <div class="box">
+          <strong>S3</strong>
+          프론트엔드 정적 파일 저장소다.
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

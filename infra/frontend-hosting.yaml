@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Private S3 static hosting behind CloudFront and Route 53.
+
+Parameters:
+  DomainName:
+    Type: String
+    Description: Custom domain name for the portfolio, for example www.example.com.
+  HostedZoneId:
+    Type: String
+    Description: Route 53 hosted zone ID that owns DomainName.
+  AcmCertificateArn:
+    Type: String
+    Description: ACM certificate ARN in us-east-1 for DomainName.
+
+Resources:
+  PortfolioBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+  PortfolioBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PortfolioBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${PortfolioBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${PortfolioDistribution}"
+
+  PortfolioOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-s3-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  PortfolioDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Aliases:
+          - !Ref DomainName
+        Origins:
+          - Id: PortfolioS3Origin
+            DomainName: !GetAtt PortfolioBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !Ref PortfolioOriginAccessControl
+        DefaultCacheBehavior:
+          TargetOriginId: PortfolioS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        ViewerCertificate:
+          AcmCertificateArn: !Ref AcmCertificateArn
+          MinimumProtocolVersion: TLSv1.2_2021
+          SslSupportMethod: sni-only
+        PriceClass: PriceClass_100
+
+  PortfolioAliasRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt PortfolioDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+
+Outputs:
+  BucketName:
+    Description: S3 bucket for built frontend assets.
+    Value: !Ref PortfolioBucket
+  CloudFrontDistributionId:
+    Description: CloudFront distribution ID.
+    Value: !Ref PortfolioDistribution
+  CloudFrontDomainName:
+    Description: CloudFront distribution domain name.
+    Value: !GetAtt PortfolioDistribution.DomainName
+  WebsiteUrl:
+    Description: HTTPS website URL.
+    Value: !Sub "https://${DomainName}"
