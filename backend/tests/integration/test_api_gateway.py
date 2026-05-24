@@ -30,16 +30,16 @@ class TestApiGateway:
 
         stacks = response["Stacks"]
         stack_outputs = stacks[0]["Outputs"]
-        api_outputs = [output for output in stack_outputs if output["OutputKey"] == "HelloWorldApi"]
+        api_outputs = [output for output in stack_outputs if output["OutputKey"] == "PortfolioApiBaseUrl"]
 
         if not api_outputs:
-            raise KeyError(f"HelloWorldAPI not found in stack {stack_name}")
+            raise KeyError(f"PortfolioApiBaseUrl not found in stack {stack_name}")
 
-        return api_outputs[0]["OutputValue"]  # Extract url from stack outputs
+        return api_outputs[0]["OutputValue"]  # Extract base url from stack outputs
 
     def test_api_gateway(self, api_gateway_url):
         """ Call the API Gateway endpoint and check the response """
-        response = requests.get(api_gateway_url)
+        response = requests.get(f"{api_gateway_url}/health")
 
         assert response.status_code == 200
-        assert response.json() == {"message": "hello world"}
+        assert response.json() == {"status": "ok", "service": "portfolio-api"}

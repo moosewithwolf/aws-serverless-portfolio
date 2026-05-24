@@ -1,72 +1,57 @@
 import json
 
-import pytest
-
 from hello_world import app
 
 
-@pytest.fixture()
-def apigw_event():
-    """ Generates API GW Event"""
-
-    return {
-        "body": '{ "test": "body"}',
-        "resource": "/{proxy+}",
-        "requestContext": {
-            "resourceId": "123456",
-            "apiId": "1234567890",
-            "resourcePath": "/{proxy+}",
-            "httpMethod": "POST",
-            "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef",
-            "accountId": "123456789012",
-            "identity": {
-                "apiKey": "",
-                "userArn": "",
-                "cognitoAuthenticationType": "",
-                "caller": "",
-                "userAgent": "Custom User Agent String",
-                "user": "",
-                "cognitoIdentityPoolId": "",
-                "cognitoIdentityId": "",
-                "cognitoAuthenticationProvider": "",
-                "sourceIp": "127.0.0.1",
-                "accountId": "",
-            },
-            "stage": "prod",
+def invoke(path, method="GET"):
+    return app.lambda_handler(
+        {
+            "rawPath": path,
+            "path": path,
+            "requestContext": {"http": {"method": method}},
+            "httpMethod": method,
         },
-        "queryStringParameters": {"foo": "bar"},
-        "headers": {
-            "Via": "1.1 08f323deadbeefa7af34d5feb414ce27.cloudfront.net (CloudFront)",
-            "Accept-Language": "en-US,en;q=0.8",
-            "CloudFront-Is-Desktop-Viewer": "true",
-            "CloudFront-Is-SmartTV-Viewer": "false",
-            "CloudFront-Is-Mobile-Viewer": "false",
-            "X-Forwarded-For": "127.0.0.1, 127.0.0.2",
-            "CloudFront-Viewer-Country": "US",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Upgrade-Insecure-Requests": "1",
-            "X-Forwarded-Port": "443",
-            "Host": "1234567890.execute-api.us-east-1.amazonaws.com",
-            "X-Forwarded-Proto": "https",
-            "X-Amz-Cf-Id": "aaaaaaaaaae3VYQb9jd-nvCd-de396Uhbp027Y2JvkCPNLmGJHqlaA==",
-            "CloudFront-Is-Tablet-Viewer": "false",
-            "Cache-Control": "max-age=0",
-            "User-Agent": "Custom User Agent String",
-            "CloudFront-Forwarded-Proto": "https",
-            "Accept-Encoding": "gzip, deflate, sdch",
-        },
-        "pathParameters": {"proxy": "/examplepath"},
-        "httpMethod": "POST",
-        "stageVariables": {"baz": "qux"},
-        "path": "/examplepath",
-    }
+        "",
+    )
 
 
-def test_lambda_handler(apigw_event):
+def body(response):
+    return json.loads(response["body"])
 
-    ret = app.lambda_handler(apigw_event, "")
-    data = json.loads(ret["body"])
 
-    assert ret["statusCode"] == 200
-    assert "message" in ret["body"]
-    assert data["message"] == "hello world"
+def test_health_returns_portfolio_api_status():
+    response = invoke("/health")
+
+    assert response["statusCode"] == 200
+    assert response["headers"]["Access-Control-Allow-Origin"] == "*"
+    assert body(response) == {"status": "ok", "service": "portfolio-api"}
+
+
+def test_profile_returns_summary_projects_resume_and_roadmap():
+    response = invoke("/profile")
+    payload = body(response)
+
+    assert response["statusCode"] == 200
+    assert payload["name"] == "Shinseong Kim"
+    assert "Full-Stack Developer" in payload["headline"]
+    assert [project["name"] for project in payload["projects"]] == [
+        "NoraHangul",
+        "Cloud Native Backend",
+    ]
+    assert "AWS Solutions Architect Associate" in payload["certifications"]
+    assert payload["aiRoadmap"]["runtime"] == "llama.cpp"
+
+
+def test_options_request_returns_cors_headers():
+    response = invoke("/profile", method="OPTIONS")
+
+    assert response["statusCode"] == 204
+    assert response["headers"]["Access-Control-Allow-Origin"] == "*"
+    assert "GET" in response["headers"]["Access-Control-Allow-Methods"]
+
+
+def test_unknown_route_returns_not_found():
+    response = invoke("/missing")
+
+    assert response["statusCode"] == 404
+    assert body(response)["message"] == "Not found"
