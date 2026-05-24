@@ -178,6 +178,16 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
+# Node / Vite
+node_modules/
+frontend/dist/
+frontend/.vite/
+backend/.aws-sam/
+*.tsbuildinfo
+
+# macOS
+.DS_Store
+
 # Cython debug symbols
 cython_debug/
 
