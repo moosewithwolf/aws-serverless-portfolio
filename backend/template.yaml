@@ -73,6 +73,7 @@ Resources:
           CHAT_REQUEST_TABLE: !Ref ChatRequestTable
           CHAT_QUEUE_URL: !GetAtt ChatQueue.QueueUrl
           CHAT_TTL_SECONDS: 3600
+          CHATBOT_ENABLED: "false"
       Policies:
         - Statement:
             - Effect: Allow

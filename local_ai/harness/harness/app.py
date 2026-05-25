@@ -67,6 +67,11 @@ def _chat_ttl_seconds() -> int:
         return 3600
 
 
+def _chatbot_enabled() -> bool:
+    """Return whether public chat intake is enabled."""
+    return os.environ.get("CHATBOT_ENABLED", "false").lower().strip() == "true"
+
+
 def _now_epoch() -> int:
     """Return the current epoch time in seconds (int)."""
     return int(time.time())
@@ -128,6 +133,13 @@ def _handle_chat_post(event: dict[str, Any]) -> dict[str, Any]:
     Validates input, stores PENDING state in DynamoDB, sends an SQS job,
     and returns requestId with status PENDING.
     """
+    if not _chatbot_enabled():
+        return _response(503, {
+            "status": ChatStatus.ERROR.value,
+            "message": "Chat is currently offline.",
+            "sanitized": False,
+        })
+
     # Parse and validate request body
     try:
         body = json.loads(event.get("body", "{}"))
