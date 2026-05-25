@@ -98,6 +98,7 @@ class MockAws:
             "CHAT_REQUEST_TABLE": "chat-requests",
             "CHAT_QUEUE_URL": "https://sqs.us-east-1.amazonaws.com/123456789/chat-jobs",
             "CHAT_TTL_SECONDS": "3600",
+            "CHATBOT_ENABLED": "true",
         }
         self._old_env_values = {}
         for key, val in self._old_env.items():
@@ -121,6 +122,25 @@ class MockAws:
 # ---------------------------------------------------------------------------
 # POST /chat tests
 # ---------------------------------------------------------------------------
+
+def test_chat_post_returns_offline_when_chatbot_disabled():
+    """POST /chat should not store or enqueue when CHATBOT_ENABLED is false."""
+    with MockAws() as (mock_table, mock_queue):
+        with patch.dict(app.os.environ, {"CHATBOT_ENABLED": "false"}):
+            response = invoke(
+                "/chat",
+                method="POST",
+                body=json.dumps({"message": "Tell me about AWS"}),
+            )
+
+    assert response["statusCode"] == 503
+    payload = body(response)
+    assert payload["status"] == "ERROR"
+    assert payload["message"] == "Chat is currently offline."
+    assert payload["sanitized"] is False
+    mock_table.put_item.assert_not_called()
+    mock_queue.send_message.assert_not_called()
+
 
 def test_chat_post_returns_pending_status():
     """POST /chat should return HTTP 202 with status PENDING and a requestId."""
@@ -284,7 +304,7 @@ def test_chat_post_returns_503_when_sqs_fails():
 
 def test_chat_post_returns_503_when_table_missing():
     """POST /chat should return 503 when CHAT_REQUEST_TABLE is not set."""
-    with patch.dict(app.os.environ, {}, clear=True):
+    with patch.dict(app.os.environ, {"CHATBOT_ENABLED": "true"}, clear=True):
         response = invoke(
             "/chat",
             method="POST",
@@ -301,7 +321,7 @@ def test_chat_post_returns_503_when_queue_missing():
     """POST /chat should return 503 when CHAT_QUEUE_URL is not set."""
     with patch.dict(
         app.os.environ,
-        {"CHAT_REQUEST_TABLE": "chat-requests", "CHAT_TTL_SECONDS": "3600"},
+        {"CHAT_REQUEST_TABLE": "chat-requests", "CHAT_TTL_SECONDS": "3600", "CHATBOT_ENABLED": "true"},
         clear=False,
     ):
         # Ensure CHAT_QUEUE_URL is absent
@@ -716,6 +736,7 @@ def test_template_local_ai_function_env_and_policies():
     assert "CHAT_REQUEST_TABLE" in env
     assert "CHAT_QUEUE_URL" in env
     assert "CHAT_TTL_SECONDS" in env
+    assert env["CHATBOT_ENABLED"] == "false"
 
     # Check IAM policies
     policies = func["Policies"]
@@ -739,4 +760,3 @@ def test_template_local_ai_function_env_and_policies():
     forbidden_actions = ["dynamodb:DeleteItem", "dynamodb:UpdateItem", "dynamodb:Query", "dynamodb:Scan"]
     for action in forbidden_actions:
         assert action not in all_actions, f"Forbidden action '{action}' should NOT be in LocalAiFunction IAM policy"
-
