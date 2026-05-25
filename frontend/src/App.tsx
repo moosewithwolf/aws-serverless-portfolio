@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 
 import { fetchHealth, fetchProfile, type Health, type Profile } from "./api";
+import { postChat, pollChat, type ChatResponse } from "./chatApi";
 import "./styles.css";
 
-type View = "home" | "projects" | "resume" | "ai";
+type View = "home" | "projects" | "resume" | "ai" | "ai-chat";
 
 const fallbackProfile: Profile = {
   name: "Shinseong Kim",
@@ -108,6 +109,12 @@ function App() {
           activeView={activeView}
           setActiveView={setActiveView}
         />
+        <NavButton
+          label="AI Chat"
+          view="ai-chat"
+          activeView={activeView}
+          setActiveView={setActiveView}
+        />
       </nav>
 
       <main>
@@ -116,6 +123,7 @@ function App() {
         {activeView === "projects" && <ProjectsView projects={profile.projects} />}
         {activeView === "resume" && <ResumeView profile={profile} />}
         {activeView === "ai" && <AiRoadmapView profile={profile} apiState={apiState} />}
+        {activeView === "ai-chat" && <AiChatView profile={profile} />}
       </main>
     </>
   );
@@ -268,6 +276,124 @@ function AiRoadmapView({ profile, apiState }: { profile: Profile; apiState: stri
             <h3>{apiState === "connected" ? "Connected" : "Waiting"}</h3>
             <p>The React app already calls the serverless API, ready for future chat endpoints.</p>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AiChatView({ profile }: { profile: Profile }) {
+  const [messages, setMessages] = useState<
+    Array<{ role: "user" | "assistant"; content: string }>[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const sendMessage = async () => {
+    const trimmed = input.trim();
+    if (!trimmed || loading) return;
+
+    setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
+    setInput("");
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response: ChatResponse = await postChat(trimmed);
+
+      // For synchronous mock backend, the response is already DONE
+      if (response.status === "DONE") {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: response.message },
+        ]);
+      } else {
+        // Poll for status updates
+        let lastMessage = "";
+        for await (const update of pollChat(response.requestId)) {
+          lastMessage = update.message;
+          if (update.status === "DONE") {
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: lastMessage || "Processing complete." },
+            ]);
+            break;
+          }
+          if (update.status === "FAILED") {
+            setError(lastMessage || "Processing failed. Please try again.");
+            break;
+          }
+        }
+      }
+    } catch {
+      setError("Failed to send message. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  return (
+    <section className="view active">
+      <div className="chat-card">
+        <div className="section-header">
+          <h2>AI Chat</h2>
+          <p>Ask about my skills, projects, certifications, or AWS architecture.</p>
+        </div>
+
+        <div className="chat-messages" aria-live="polite">
+          {messages.length === 0 && (
+            <div className="chat-empty">
+              <p>No messages yet. Send a message to start the conversation!</p>
+            </div>
+          )}
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={`chat-bubble ${msg.role}`}
+            >
+              {msg.role === "user" ? (
+                <strong>Me: </strong>
+              ) : (
+                <strong>AI: </strong>
+              )}
+              {msg.content}
+            </div>
+          ))}
+          {loading && (
+            <div className="chat-bubble assistant loading">
+              <strong>AI: </strong>
+              <span className="typing-indicator">Thinking…</span>
+            </div>
+          )}
+        </div>
+
+        {error && <div className="chat-error" role="alert">{error}</div>}
+
+        <div className="chat-input-area">
+          <textarea
+            className="chat-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message…"
+            disabled={loading}
+            rows={2}
+          />
+          <button
+            className="chat-send-btn"
+            onClick={sendMessage}
+            disabled={loading || !input.trim()}
+            type="button"
+          >
+            Send
+          </button>
         </div>
       </div>
     </section>

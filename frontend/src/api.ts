@@ -30,7 +30,7 @@ export type Health = {
   service: string;
 };
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export async function fetchHealth(): Promise<Health> {
   return request<Health>("/health");

@@ -75,6 +75,56 @@ describe("App", () => {
     expect(screen.getByText("planned-v2")).toBeInTheDocument();
   });
 
+  it("opens the AI Chat tab and sends a message", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.endsWith("/health")) {
+          return new Response(JSON.stringify({ status: "ok", service: "portfolio-api" }));
+        }
+        if (url.endsWith("/profile")) {
+          return new Response(JSON.stringify(profile));
+        }
+        if (url.endsWith("/chat")) {
+          // POST /chat
+          return new Response(
+            JSON.stringify({ requestId: "abc123", status: "DONE", message: "Hello! How can I help?", sanitized: true }),
+          );
+        }
+        if (url.includes("/chat/")) {
+          // GET /chat/{requestId}
+          return new Response(
+            JSON.stringify({ status: "DONE", message: "Hello! How can I help?" }),
+          );
+        }
+        return new Response("Not found", { status: 404 });
+      }),
+    );
+
+    render(<App />);
+
+    // Navigate to AI Chat tab
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    expect(
+      await screen.findByRole("heading", { name: "AI Chat" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("No messages yet. Send a message to start the conversation!")).toBeInTheDocument();
+
+    // Type a message and send
+    const textarea = document.querySelector("textarea.chat-input") as HTMLTextAreaElement;
+    await user.click(textarea!);
+    await user.type(textarea!, "Tell me about your skills");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    // Verify user and assistant messages appear
+    const chatMessages = document.querySelector(".chat-messages") as HTMLElement;
+    expect(chatMessages!.textContent).toContain("Me:");
+    expect(chatMessages!.textContent).toContain("Tell me about your skills");
+    expect(chatMessages!.textContent).toContain("AI:");
+    expect(chatMessages!.textContent).toContain("Hello! How can I help");
+  });
+
   it("shows an API failure state when the health check fails", async () => {
     vi.stubGlobal(
       "fetch",
