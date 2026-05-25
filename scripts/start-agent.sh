@@ -15,10 +15,12 @@ fi
 
 AWS_PROFILE="${AWS_PROFILE:-portfolio}"
 AWS_REGION="${AWS_REGION:-ca-central-1}"
+S3_REGION="${S3_REGION:-${AWS_REGION}}"
 CHAT_CONFIG_KEY="${CHAT_CONFIG_KEY:-chat-config.json}"
 CHAT_CONFIG_CACHE_CONTROL="${CHAT_CONFIG_CACHE_CONTROL:-no-cache, max-age=0}"
 COMPOSE_FILE="${COMPOSE_FILE:-${ROOT_DIR}/local_ai/harness/docker-compose.yml}"
 LOCAL_AI_BACKEND="${LOCAL_AI_BACKEND:-container}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 require_var() {
   local name="$1"
@@ -45,14 +47,55 @@ JSON
     --cache-control "${CHAT_CONFIG_CACHE_CONTROL}" \
     --content-type "application/json" \
     --profile "${AWS_PROFILE}" \
-    --region "${AWS_REGION}"
+    --region "${S3_REGION}"
 
   rm -f "${tmp_file}"
+}
+
+update_lambda_chatbot_enabled() {
+  local enabled="$1"
+  local current_env
+  local merged_env
+  current_env="$(mktemp)"
+  merged_env="$(mktemp)"
+
+  aws lambda get-function-configuration \
+    --function-name "${LOCAL_AI_FUNCTION_NAME}" \
+    --query 'Environment.Variables' \
+    --output json \
+    --profile "${AWS_PROFILE}" \
+    --region "${AWS_REGION}" > "${current_env}"
+
+  "${PYTHON_BIN}" - "${current_env}" "${merged_env}" "${enabled}" <<'PY'
+import json
+import sys
+
+source, target, enabled = sys.argv[1:4]
+with open(source, "r", encoding="utf-8") as fh:
+    variables = json.load(fh) or {}
+variables["CHATBOT_ENABLED"] = enabled
+with open(target, "w", encoding="utf-8") as fh:
+    json.dump({"Variables": variables}, fh)
+PY
+
+  aws lambda update-function-configuration \
+    --function-name "${LOCAL_AI_FUNCTION_NAME}" \
+    --environment "file://${merged_env}" \
+    --profile "${AWS_PROFILE}" \
+    --region "${AWS_REGION}" >/dev/null
+
+  aws lambda wait function-updated \
+    --function-name "${LOCAL_AI_FUNCTION_NAME}" \
+    --profile "${AWS_PROFILE}" \
+    --region "${AWS_REGION}"
+
+  rm -f "${current_env}" "${merged_env}"
 }
 
 require_var FRONTEND_BUCKET
 require_var CHAT_REQUEST_TABLE
 require_var CHAT_QUEUE_URL
+require_var LOCAL_AI_FUNCTION_NAME
 
 mkdir -p "${ROOT_DIR}/.agent"
 
@@ -71,6 +114,7 @@ export LOCAL_AI_BACKEND
 nohup "${ROOT_DIR}/.venv/bin/python" -m harness.sqs_agent > "${LOG_FILE}" 2>&1 &
 echo "$!" > "${PID_FILE}"
 
+update_lambda_chatbot_enabled true
 upload_chat_config true "Chat is online."
 
 echo "Agent started with PID $(cat "${PID_FILE}")."
