@@ -8,6 +8,28 @@ Globals:
     Timeout: 3
 
 Resources:
+  ChatRequestTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: chat-requests
+      AttributeDefinitions:
+        - AttributeName: requestId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: requestId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  ChatQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: chat-jobs
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 1209600
+
   LocalAiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -17,6 +39,22 @@ Resources:
       Architectures:
         - x86_64
       Timeout: 30
+      Environment:
+        Variables:
+          CHAT_REQUEST_TABLE: !Ref ChatRequestTable
+          CHAT_QUEUE_URL: !GetAtt ChatQueue.QueueUrl
+          CHAT_TTL_SECONDS: 3600
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: !GetAtt ChatRequestTable.Arn
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt ChatQueue.Arn
       Events:
         ChatPost:
           Type: Api

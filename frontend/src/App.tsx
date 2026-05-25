@@ -306,7 +306,7 @@ function AiChatView({ profile }: { profile: Profile }) {
       if (response.status === "DONE") {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: response.message },
+          { role: "assistant", content: response.message ?? "Processing complete." },
         ]);
       } else {
         // Poll for status updates

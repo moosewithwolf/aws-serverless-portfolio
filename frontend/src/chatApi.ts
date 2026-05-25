@@ -22,8 +22,8 @@ export type ChatRequest = {
 export type ChatResponse = {
   requestId: string;
   status: "PENDING" | "DONE" | "ERROR";
-  message: string;
-  sanitized: boolean;
+  message?: string;
+  sanitized?: boolean;
 };
 
 export type ChatStatusResponse = {
