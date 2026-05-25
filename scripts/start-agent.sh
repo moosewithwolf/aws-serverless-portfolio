@@ -120,11 +120,20 @@ export AWS_REGION
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION}}"
 export AWS_PROFILE
 
-if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
+if [[ -f "${PID_FILE}" ]] && ! kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
+  rm -f "${PID_FILE}"
+fi
+
+if [[ -f "${PID_FILE}" ]]; then
   echo "Agent is already running with PID $(cat "${PID_FILE}")."
 else
-  nohup "${ROOT_DIR}/.venv/bin/python" -m harness.sqs_agent > "${LOG_FILE}" 2>&1 &
+  nohup "${ROOT_DIR}/.venv/bin/python" -u -m harness.sqs_agent > "${LOG_FILE}" 2>&1 &
   echo "$!" > "${PID_FILE}"
+  sleep 1
+  if ! kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
+    echo "ERROR: agent failed to start. Check ${LOG_FILE}" >&2
+    exit 1
+  fi
 fi
 
 update_lambda_chatbot_enabled true

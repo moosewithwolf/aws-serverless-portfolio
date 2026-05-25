@@ -41,6 +41,7 @@ SQS_BATCH_SIZE: int = 1
 POLL_INTERVAL: int = 2           # seconds between poll cycles in loop mode
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +110,8 @@ def _handle_message(body: str, table_name: str) -> bool:
             return False
         return True
 
+    logger.info("Processing chat request requestId=%s", request_id)
+
     # Process through model gateway
     result = process_message(message, request_id=request_id)
     status = result.get("status", ChatStatus.ERROR.value)
@@ -125,6 +128,8 @@ def _handle_message(body: str, table_name: str) -> bool:
             request_id,
         )
         return False
+
+    logger.info("Completed chat request requestId=%s status=%s", request_id, status)
 
     # DynamoDB succeeded — return True so poll_once deletes with actual ReceiptHandle
     return True
@@ -200,6 +205,7 @@ def _delete_sqs_message(queue_url: str, receipt_handle: str) -> bool:
                 QueueUrl=queue_url,
                 ReceiptHandle=receipt_handle,
             )
+        logger.info("Deleted SQS message.")
         return True
     except Exception as exc:
         logger.error("SQS delete error: %s", exc)
@@ -244,6 +250,7 @@ def poll_once(table_name: str, queue_url: str) -> None:
         return
 
     messages = _receive_sqs_messages(queue)
+    logger.info("Received %s SQS message(s).", len(messages.get("Messages", [])))
 
     for msg in messages.get("Messages", []):
         body = msg.get("Body", "")
