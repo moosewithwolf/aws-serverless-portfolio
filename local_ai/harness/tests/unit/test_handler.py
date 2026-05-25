@@ -585,6 +585,118 @@ def test_template_has_required_resources():
     assert sqs["VisibilityTimeout"] == 300
 
 
+# ---------------------------------------------------------------------------
+# Phase 5 — Operational safety: log groups, throttling, DataTrace
+# ---------------------------------------------------------------------------
+
+
+def test_template_data_trace_disabled():
+    """DataTraceEnabled must be false or absent to avoid logging request/response bodies.
+
+    The API Gateway method settings governs access logging for the implicit
+    API Gateway. DataTraceEnabled: true logs the full body — unacceptable for
+    a public chatbot that may receive PII or sensitive user messages.
+    """
+    template = _load_template()
+
+    method_settings = (
+        template.get("Globals", {})
+        .get("Api", {})
+        .get("MethodSettings", [])
+    )
+    assert len(method_settings) >= 1, "Expected at least one MethodSettings block"
+
+    for settings in method_settings:
+        # DataTraceEnabled should NOT be true
+        assert settings.get("DataTraceEnabled") is not True, (
+            "DataTraceEnabled must be false or absent to prevent body logging"
+        )
+
+
+def test_template_has_throttling():
+    """API Gateway must have rate/burst throttling configured."""
+    template = _load_template()
+
+    method_settings = (
+        template.get("Globals", {})
+        .get("Api", {})
+        .get("MethodSettings", [])
+    )
+    assert len(method_settings) >= 1
+
+    settings = method_settings[0]
+    assert "ThrottlingRateLimit" in settings, "ThrottlingRateLimit missing"
+    assert "ThrottlingBurstLimit" in settings, "ThrottlingBurstLimit missing"
+    # Reasonable defaults: rate 5/s, burst 10
+    assert settings["ThrottlingRateLimit"] >= 1
+    assert settings["ThrottlingBurstLimit"] >= settings["ThrottlingRateLimit"]
+
+
+def test_template_log_group_uses_function_refs():
+    """Log group names must use !Sub with function refs, not hard-coded stack names.
+
+    Hard-coded names like `/aws/lambda/portfolio-stack-LocalAiFunction`
+    break when the stack is deployed under a different name.
+    """
+    template = _load_template()
+    resources = template["Resources"]
+
+    # LocalAiFunctionLogs log group
+    local_logs = resources["LocalAiFunctionLogs"]["Properties"]["LogGroupName"]
+    assert isinstance(local_logs, _FnSub), (
+        f"LocalAiFunctionLogs LogGroupName should use !Sub, got {type(local_logs).__name__}"
+    )
+    assert "LocalAiFunction" in local_logs.value, (
+        "LogGroupName must reference ${LocalAiFunction}"
+    )
+    assert "portfolio-stack" not in local_logs.value, (
+        "LogGroupName must not hard-code 'portfolio-stack'; use function ref"
+    )
+
+    # PortfolioApiFunctionLogs log group
+    api_logs = resources["PortfolioApiFunctionLogs"]["Properties"]["LogGroupName"]
+    assert isinstance(api_logs, _FnSub), (
+        f"PortfolioApiFunctionLogs LogGroupName should use !Sub, got {type(api_logs).__name__}"
+    )
+    assert "PortfolioApiFunction" in api_logs.value, (
+        "LogGroupName must reference ${PortfolioApiFunction}"
+    )
+    assert "portfolio-stack" not in api_logs.value, (
+        "LogGroupName must not hard-code 'portfolio-stack'; use function ref"
+    )
+
+
+def test_template_no_gateway_log_group():
+    """GatewayLogs log group should not exist — it was hard-coded and never wired.
+
+    If API Gateway access logging is needed, it should be configured via
+    method-level logging settings on the stage, not a standalone LogGroup
+    resource with a hard-coded name.
+    """
+    template = _load_template()
+    resources = template["Resources"]
+    assert "GatewayLogs" not in resources, (
+        "GatewayLogs log group removed: it was hard-coded and unattached"
+    )
+
+
+def test_template_no_xray_tracing():
+    """TracingEnabled should not be true in Api globals.
+
+    X-Ray tracing adds cost and is not needed for this public chatbot.
+    """
+    template = _load_template()
+
+    tracing = (
+        template.get("Globals", {})
+        .get("Api", {})
+        .get("TracingEnabled", None)
+    )
+    assert tracing is not True, (
+        "Api TracingEnabled should be false or absent (X-Ray adds cost)"
+    )
+
+
 def test_template_local_ai_function_env_and_policies():
     """Verify LocalAiFunction has correct env vars and IAM policies.
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { fetchHealth, fetchProfile, type Health, type Profile } from "./api";
-import { postChat, pollChat, type ChatResponse } from "./chatApi";
+import { postChat, pollChat, PollTimeoutError, type ChatResponse } from "./chatApi";
 import "./styles.css";
 
 type View = "home" | "projects" | "resume" | "ai" | "ai-chat";
@@ -326,8 +326,12 @@ function AiChatView({ profile }: { profile: Profile }) {
           }
         }
       }
-    } catch {
-      setError("Failed to send message. Please try again.");
+    } catch (err) {
+      if (err instanceof PollTimeoutError) {
+        setError("The local agent is offline or timed out. Please start the model container and try again.");
+      } else {
+        setError("Failed to send message. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
