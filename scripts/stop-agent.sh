@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT_DIR}/.env.local-ai"
 PID_FILE="${ROOT_DIR}/.agent/sqs-agent.pid"
+PLIST_FILE="${ROOT_DIR}/.agent/com.shinseong.portfolio.local-ai-agent.plist"
+LAUNCHD_LABEL="com.shinseong.portfolio.local-ai-agent"
 
 if [[ -f "${ENV_FILE}" ]]; then
   set -a
@@ -114,6 +116,9 @@ if [[ -f "${PID_FILE}" ]]; then
   fi
   rm -f "${PID_FILE}"
 fi
+
+launchctl bootout "gui/$(id -u)" "${PLIST_FILE}" >/dev/null 2>&1 || true
+launchctl bootout "gui/$(id -u)/${LAUNCHD_LABEL}" >/dev/null 2>&1 || true
 
 docker compose -f "${COMPOSE_FILE}" down
 

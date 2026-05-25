@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT_DIR}/.env.local-ai"
 PID_FILE="${ROOT_DIR}/.agent/sqs-agent.pid"
 LOG_FILE="${ROOT_DIR}/.agent/sqs-agent.log"
+PLIST_FILE="${ROOT_DIR}/.agent/com.shinseong.portfolio.local-ai-agent.plist"
+LAUNCHD_LABEL="com.shinseong.portfolio.local-ai-agent"
 
 if [[ -f "${ENV_FILE}" ]]; then
   set -a
@@ -120,32 +122,60 @@ export AWS_REGION
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION}}"
 export AWS_PROFILE
 
-if [[ -f "${PID_FILE}" ]] && ! kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
-  rm -f "${PID_FILE}"
-fi
+cat > "${PLIST_FILE}" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${LAUNCHD_LABEL}</string>
+  <key>WorkingDirectory</key>
+  <string>${ROOT_DIR}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${ROOT_DIR}/.venv/bin/python</string>
+    <string>-u</string>
+    <string>-m</string>
+    <string>harness.sqs_agent</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONPATH</key>
+    <string>${ROOT_DIR}/local_ai/harness</string>
+    <key>CHAT_REQUEST_TABLE</key>
+    <string>${CHAT_REQUEST_TABLE}</string>
+    <key>CHAT_QUEUE_URL</key>
+    <string>${CHAT_QUEUE_URL}</string>
+    <key>LOCAL_AI_BACKEND</key>
+    <string>${LOCAL_AI_BACKEND}</string>
+    <key>AWS_REGION</key>
+    <string>${AWS_REGION}</string>
+    <key>AWS_DEFAULT_REGION</key>
+    <string>${AWS_DEFAULT_REGION}</string>
+    <key>AWS_PROFILE</key>
+    <string>${AWS_PROFILE}</string>
+  </dict>
+  <key>KeepAlive</key>
+  <true/>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>${LOG_FILE}</string>
+  <key>StandardErrorPath</key>
+  <string>${LOG_FILE}</string>
+</dict>
+</plist>
+PLIST
 
-if [[ -f "${PID_FILE}" ]]; then
-  echo "Agent is already running with PID $(cat "${PID_FILE}")."
-else
-  nohup bash -c '
-    while true; do
-      "'"${ROOT_DIR}"'/.venv/bin/python" -u -m harness.sqs_agent
-      code=$?
-      echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") agent exited with code ${code}; restarting in 5s" >&2
-      sleep 5
-    done
-  ' > "${LOG_FILE}" 2>&1 &
-  echo "$!" > "${PID_FILE}"
-  sleep 1
-  if ! kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
-    echo "ERROR: agent failed to start. Check ${LOG_FILE}" >&2
-    exit 1
-  fi
-fi
+launchctl bootout "gui/$(id -u)" "${PLIST_FILE}" >/dev/null 2>&1 || true
+launchctl bootstrap "gui/$(id -u)" "${PLIST_FILE}"
+sleep 2
+launchctl print "gui/$(id -u)/${LAUNCHD_LABEL}" >/dev/null
+rm -f "${PID_FILE}"
 
 update_lambda_chatbot_enabled true
 upload_chat_config true "Chat is online."
 invalidate_chat_config
 
-echo "Agent started with PID $(cat "${PID_FILE}")."
+echo "Agent started via launchctl label ${LAUNCHD_LABEL}."
 echo "Log: ${LOG_FILE}"
