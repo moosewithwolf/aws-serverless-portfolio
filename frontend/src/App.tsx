@@ -284,7 +284,8 @@ function AiRoadmapView({ profile, apiState }: { profile: Profile; apiState: stri
 
 function AiChatView({ profile }: { profile: Profile }) {
   const [messages, setMessages] = useState<
-    Array<{ role: "user" | "assistant"; content: string }>[]>([]);
+    { role: "user" | "assistant"; content: string }[]
+  >([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -319,7 +320,7 @@ function AiChatView({ profile }: { profile: Profile }) {
             ]);
             break;
           }
-          if (update.status === "FAILED") {
+          if (update.status === "ERROR") {
             setError(lastMessage || "Processing failed. Please try again.");
             break;
           }

@@ -14,6 +14,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel
+
 
 # ---------------------------------------------------------------------------
 # Input safety patterns (checked before sending to model)

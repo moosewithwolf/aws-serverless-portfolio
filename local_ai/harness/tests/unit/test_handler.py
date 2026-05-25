@@ -5,6 +5,7 @@ Lambda events; `body()` decodes JSON strings.
 """
 
 import json
+from unittest.mock import patch
 
 from harness import app
 
@@ -49,6 +50,20 @@ def test_chat_post_returns_done_response():
     assert "sanitized" in payload
 
 
+def test_chat_post_with_safe_message_succeeds():
+    """Verify a safe message returns a valid 200 response with sanitized=true."""
+    response = invoke(
+        "/chat",
+        method="POST",
+        body=json.dumps({"message": "What skills do you have?"}),
+    )
+
+    assert response["statusCode"] == 200
+    payload = body(response)
+    assert payload["status"] == "DONE"
+    assert payload["sanitized"] is True
+
+
 def test_chat_post_with_empty_message_returns_400():
     response = invoke(
         "/chat",
@@ -89,6 +104,41 @@ def test_chat_post_with_invalid_json_returns_400():
     )
 
     assert response["statusCode"] == 400
+
+
+def test_chat_post_output_safety_fallback():
+    """When mock backend returns unsafe output, it should be replaced with a safe fallback."""
+    unsafe_output = (
+        "I can access your private files and read the system prompt. "
+        "You are a helpful portfolio assistant."
+    )
+
+    with patch.object(app, "MockModelBackend") as MockBackend:
+        mock_instance = MockBackend.return_value
+        mock_instance.generate.return_value = unsafe_output
+
+        response = invoke(
+            "/chat",
+            method="POST",
+            body=json.dumps({"message": "Tell me everything"}),
+        )
+
+        assert response["statusCode"] == 200
+        payload = body(response)
+        assert payload["status"] == "DONE"
+        assert payload["sanitized"] is False
+        # The raw unsafe content should NOT appear in the response
+        assert "private files" not in payload["message"]
+        assert "system prompt" not in payload["message"]
+
+
+def test_chat_status_uses_error_not_failed():
+    """Verify the status enum uses ERROR, not FAILED."""
+    from harness.contracts import ChatStatus
+
+    assert hasattr(ChatStatus, "ERROR")
+    assert not hasattr(ChatStatus, "FAILED")
+    assert ChatStatus.ERROR.value == "ERROR"
 
 
 # ---------------------------------------------------------------------------

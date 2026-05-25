@@ -21,13 +21,13 @@ export type ChatRequest = {
 
 export type ChatResponse = {
   requestId: string;
-  status: "PENDING" | "DONE" | "FAILED";
+  status: "PENDING" | "DONE" | "ERROR";
   message: string;
   sanitized: boolean;
 };
 
 export type ChatStatusResponse = {
-  status: "PENDING" | "DONE" | "FAILED";
+  status: "PENDING" | "DONE" | "ERROR";
   message: string;
 };
 
@@ -58,7 +58,7 @@ export async function postChat(message: string): Promise<ChatResponse> {
 // ---------------------------------------------------------------------------
 
 const POLL_INTERVAL_MS = 2000;
-const TERMINAL_STATUSES = new Set(["DONE", "FAILED"]);
+const TERMINAL_STATUSES = new Set(["DONE", "ERROR"]);
 
 /**
  * Async generator that polls GET /chat/{requestId} until the status

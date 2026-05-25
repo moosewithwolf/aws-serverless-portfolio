@@ -17,7 +17,7 @@ class ChatStatus(str, Enum):
 
     PENDING = "PENDING"
     DONE = "DONE"
-    FAILED = "FAILED"
+    ERROR = "ERROR"
 
 
 class ChatRequest(BaseModel):
