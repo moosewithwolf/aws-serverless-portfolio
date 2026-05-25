@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 
 import { fetchHealth, fetchProfile, type Health, type Profile } from "./api";
-import { postChat, pollChat, PollTimeoutError, type ChatResponse } from "./chatApi";
+import { GlobalChatWidget } from "./GlobalChatWidget";
 import { loadChatConfig, type ChatConfig } from "./chatConfig";
 import "./styles.css";
 
-type View = "home" | "projects" | "resume" | "ai" | "ai-chat";
+type View = "home" | "projects" | "resume" | "ai";
 
 const fallbackProfile: Profile = {
   name: "Shinseong Kim",
@@ -128,12 +128,6 @@ function App() {
           activeView={activeView}
           setActiveView={setActiveView}
         />
-        <NavButton
-          label="AI Chat"
-          view="ai-chat"
-          activeView={activeView}
-          setActiveView={setActiveView}
-        />
       </nav>
 
       <main>
@@ -142,8 +136,8 @@ function App() {
         {activeView === "projects" && <ProjectsView projects={profile.projects} />}
         {activeView === "resume" && <ResumeView profile={profile} />}
         {activeView === "ai" && <AiRoadmapView profile={profile} apiState={apiState} />}
-        {activeView === "ai-chat" && <AiChatView profile={profile} chatConfig={chatConfig} />}
       </main>
+      <GlobalChatWidget chatConfig={chatConfig} />
     </>
   );
 }
@@ -301,135 +295,7 @@ function AiRoadmapView({ profile, apiState }: { profile: Profile; apiState: stri
   );
 }
 
-function AiChatView({ profile, chatConfig }: { profile: Profile; chatConfig: ChatConfig }) {
-  const [messages, setMessages] = useState<
-    { role: "user" | "assistant"; content: string }[]
-  >([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const sendMessage = async () => {
-    const trimmed = input.trim();
-    if (!trimmed || loading || !chatConfig.enabled) return;
-
-    setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
-    setInput("");
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response: ChatResponse = await postChat(trimmed);
-
-      // For synchronous mock backend, the response is already DONE
-      if (response.status === "DONE") {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: response.message ?? "Processing complete." },
-        ]);
-      } else {
-        // Poll for status updates
-        let lastMessage = "";
-        for await (const update of pollChat(response.requestId)) {
-          lastMessage = update.message;
-          if (update.status === "DONE") {
-            setMessages((prev) => [
-              ...prev,
-              { role: "assistant", content: lastMessage || "Processing complete." },
-            ]);
-            break;
-          }
-          if (update.status === "ERROR") {
-            setError(lastMessage || "Processing failed. Please try again.");
-            break;
-          }
-        }
-      }
-    } catch (err) {
-      if (err instanceof PollTimeoutError) {
-        setError("The local agent is offline or timed out. Please start the model container and try again.");
-      } else {
-        setError("Failed to send message. Please try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  return (
-    <section className="view active">
-      <div className="chat-card">
-        <div className="section-header">
-          <h2>AI Chat</h2>
-          <p>Ask about my skills, projects, certifications, or AWS architecture.</p>
-        </div>
-
-        <div className="chat-messages" aria-live="polite">
-          {messages.length === 0 && (
-            <div className="chat-empty">
-              <p>
-                {chatConfig.enabled
-                  ? "No messages yet. Send a message to start the conversation!"
-                  : chatConfig.message}
-              </p>
-            </div>
-          )}
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`chat-bubble ${msg.role}`}
-            >
-              {msg.role === "user" ? (
-                <strong>Me: </strong>
-              ) : (
-                <strong>AI: </strong>
-              )}
-              {msg.content}
-            </div>
-          ))}
-          {loading && (
-            <div className="chat-bubble assistant loading">
-              <strong>AI: </strong>
-              <span className="typing-indicator">Thinking…</span>
-            </div>
-          )}
-        </div>
-
-        {error && <div className="chat-error" role="alert">{error}</div>}
-        {!chatConfig.enabled && messages.length > 0 && (
-          <div className="chat-error" role="status">{chatConfig.message}</div>
-        )}
-
-        <div className="chat-input-area">
-          <textarea
-            className="chat-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message…"
-            disabled={loading || !chatConfig.enabled}
-            rows={2}
-          />
-          <button
-            className="chat-send-btn"
-            onClick={sendMessage}
-            disabled={loading || !input.trim() || !chatConfig.enabled}
-            type="button"
-          >
-            Send
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function BackgroundWorld() {
   return (

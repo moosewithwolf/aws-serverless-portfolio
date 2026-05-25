@@ -110,8 +110,8 @@ describe("App", () => {
 
     render(<App />);
 
-    // Navigate to AI Chat tab
-    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    // Open the global chat widget
+    await user.click(screen.getByRole("button", { name: "Open AI chat" }));
     expect(
       await screen.findByRole("heading", { name: "AI Chat" }),
     ).toBeInTheDocument();
@@ -151,7 +151,7 @@ describe("App", () => {
 
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    await user.click(screen.getByRole("button", { name: "Open AI chat" }));
     expect(await screen.findByText("Chat is currently offline.")).toBeInTheDocument();
 
     const textarea = document.querySelector("textarea.chat-input") as HTMLTextAreaElement;
@@ -174,5 +174,37 @@ describe("App", () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByText("API offline")).toBeInTheDocument());
+  });
+
+  it("keeps the global chat widget mounted while switching portfolio tabs", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/chat-config.json")) {
+          return new Response(JSON.stringify({ enabled: true }));
+        }
+        if (url.endsWith("/health")) {
+          return new Response(JSON.stringify({ status: "ok", service: "portfolio-api" }));
+        }
+        if (url.endsWith("/profile")) {
+          return new Response(JSON.stringify(profile));
+        }
+        return new Response("Not found", { status: 404 });
+      }),
+    );
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Open AI chat" }));
+    await user.type(screen.getByPlaceholderText("Type a message..."), "Keep this draft");
+
+    await user.click(screen.getByRole("button", { name: "Projects" }));
+    expect(await screen.findByText("NoraHangul")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Keep this draft")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Resume" }));
+    expect(screen.getByText("Computer Programming and Analysis")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Keep this draft")).toBeInTheDocument();
   });
 });
