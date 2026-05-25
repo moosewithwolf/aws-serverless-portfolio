@@ -22,8 +22,8 @@ export type ChatRequest = {
 export type ChatResponse = {
   requestId: string;
   status: "PENDING" | "DONE" | "ERROR";
-  message: string;
-  sanitized: boolean;
+  message?: string;
+  sanitized?: boolean;
 };
 
 export type ChatStatusResponse = {
@@ -58,11 +58,23 @@ export async function postChat(message: string): Promise<ChatResponse> {
 // ---------------------------------------------------------------------------
 
 const POLL_INTERVAL_MS = 2000;
+const MAX_POLL_ATTEMPTS = 30;
 const TERMINAL_STATUSES = new Set(["DONE", "ERROR"]);
 
 /**
+ * Error thrown when the polling limit is reached (agent offline / timed out).
+ */
+export class PollTimeoutError extends Error {
+  constructor() {
+    super("Local agent is offline or timed out.");
+    this.name = "PollTimeoutError";
+  }
+}
+
+/**
  * Async generator that polls GET /chat/{requestId} until the status
- * reaches a terminal state (DONE or ERROR).
+ * reaches a terminal state (DONE or ERROR) or the max attempt count
+ * is reached.
  *
  * Yields each `ChatStatusResponse` as it arrives.
  *
@@ -75,7 +87,11 @@ const TERMINAL_STATUSES = new Set(["DONE", "ERROR"]);
  * ```
  */
 export async function* pollChat(requestId: string): AsyncGenerator<ChatStatusResponse> {
-  while (true) {
+  let attempt = 0;
+
+  while (attempt < MAX_POLL_ATTEMPTS) {
+    attempt++;
+
     const response = await fetch(`${apiBaseUrl}/chat/${requestId}`);
 
     if (!response.ok) {
@@ -91,11 +107,13 @@ export async function* pollChat(requestId: string): AsyncGenerator<ChatStatusRes
     yield update;
 
     if (TERMINAL_STATUSES.has(update.status)) {
-      break;
+      return;
     }
 
     await delay(POLL_INTERVAL_MS);
   }
+
+  throw new PollTimeoutError();
 }
 
 // ---------------------------------------------------------------------------

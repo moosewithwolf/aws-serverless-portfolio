@@ -149,6 +149,8 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.*.example
 .envrc
 .venv
 env/
@@ -184,6 +186,7 @@ frontend/dist/
 frontend/.vite/
 backend/.aws-sam/
 *.tsbuildinfo
+.agent/
 
 # macOS
 .DS_Store

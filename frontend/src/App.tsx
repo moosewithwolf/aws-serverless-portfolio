@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { fetchHealth, fetchProfile, type Health, type Profile } from "./api";
-import { postChat, pollChat, type ChatResponse } from "./chatApi";
+import { postChat, pollChat, PollTimeoutError, type ChatResponse } from "./chatApi";
+import { loadChatConfig, type ChatConfig } from "./chatConfig";
 import "./styles.css";
 
 type View = "home" | "projects" | "resume" | "ai" | "ai-chat";
@@ -57,6 +58,10 @@ function App() {
   const [profile, setProfile] = useState<Profile>(fallbackProfile);
   const [health, setHealth] = useState<Health | null>(null);
   const [apiState, setApiState] = useState<"loading" | "connected" | "offline">("loading");
+  const [chatConfig, setChatConfig] = useState<ChatConfig>({
+    enabled: false,
+    message: "Checking chat availability.",
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -81,6 +86,20 @@ function App() {
     }
 
     loadApiData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    loadChatConfig().then((config) => {
+      if (isMounted) {
+        setChatConfig(config);
+      }
+    });
+
     return () => {
       isMounted = false;
     };
@@ -123,7 +142,7 @@ function App() {
         {activeView === "projects" && <ProjectsView projects={profile.projects} />}
         {activeView === "resume" && <ResumeView profile={profile} />}
         {activeView === "ai" && <AiRoadmapView profile={profile} apiState={apiState} />}
-        {activeView === "ai-chat" && <AiChatView profile={profile} />}
+        {activeView === "ai-chat" && <AiChatView profile={profile} chatConfig={chatConfig} />}
       </main>
     </>
   );
@@ -282,7 +301,7 @@ function AiRoadmapView({ profile, apiState }: { profile: Profile; apiState: stri
   );
 }
 
-function AiChatView({ profile }: { profile: Profile }) {
+function AiChatView({ profile, chatConfig }: { profile: Profile; chatConfig: ChatConfig }) {
   const [messages, setMessages] = useState<
     { role: "user" | "assistant"; content: string }[]
   >([]);
@@ -292,7 +311,7 @@ function AiChatView({ profile }: { profile: Profile }) {
 
   const sendMessage = async () => {
     const trimmed = input.trim();
-    if (!trimmed || loading) return;
+    if (!trimmed || loading || !chatConfig.enabled) return;
 
     setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
     setInput("");
@@ -306,7 +325,7 @@ function AiChatView({ profile }: { profile: Profile }) {
       if (response.status === "DONE") {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: response.message },
+          { role: "assistant", content: response.message ?? "Processing complete." },
         ]);
       } else {
         // Poll for status updates
@@ -326,8 +345,12 @@ function AiChatView({ profile }: { profile: Profile }) {
           }
         }
       }
-    } catch {
-      setError("Failed to send message. Please try again.");
+    } catch (err) {
+      if (err instanceof PollTimeoutError) {
+        setError("The local agent is offline or timed out. Please start the model container and try again.");
+      } else {
+        setError("Failed to send message. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -351,7 +374,11 @@ function AiChatView({ profile }: { profile: Profile }) {
         <div className="chat-messages" aria-live="polite">
           {messages.length === 0 && (
             <div className="chat-empty">
-              <p>No messages yet. Send a message to start the conversation!</p>
+              <p>
+                {chatConfig.enabled
+                  ? "No messages yet. Send a message to start the conversation!"
+                  : chatConfig.message}
+              </p>
             </div>
           )}
           {messages.map((msg, i) => (
@@ -376,6 +403,9 @@ function AiChatView({ profile }: { profile: Profile }) {
         </div>
 
         {error && <div className="chat-error" role="alert">{error}</div>}
+        {!chatConfig.enabled && messages.length > 0 && (
+          <div className="chat-error" role="status">{chatConfig.message}</div>
+        )}
 
         <div className="chat-input-area">
           <textarea
@@ -384,13 +414,13 @@ function AiChatView({ profile }: { profile: Profile }) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message…"
-            disabled={loading}
+            disabled={loading || !chatConfig.enabled}
             rows={2}
           />
           <button
             className="chat-send-btn"
             onClick={sendMessage}
-            disabled={loading || !input.trim()}
+            disabled={loading || !input.trim() || !chatConfig.enabled}
             type="button"
           >
             Send
