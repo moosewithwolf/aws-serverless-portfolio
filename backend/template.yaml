@@ -30,13 +30,6 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${LocalAiFunction}"
       RetentionInDays: 14
 
-  # Portfolio API Function Logs — retention set to 14 days (Phase 5)
-  PortfolioApiFunctionLogs:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${PortfolioApiFunction}"
-      RetentionInDays: 14
-
   ChatRequestTable:
     Type: AWS::DynamoDB::Table
     Properties:

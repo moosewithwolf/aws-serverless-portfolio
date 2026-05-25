@@ -187,6 +187,7 @@ frontend/.vite/
 backend/.aws-sam/
 *.tsbuildinfo
 .agent/
+.rpiv/
 
 # macOS
 .DS_Store

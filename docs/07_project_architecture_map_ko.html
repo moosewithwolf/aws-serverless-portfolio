@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AWS Serverless Portfolio 전체 구조 지도</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --ink: #172033;
+        --muted: #667085;
+        --line: #d9e1ec;
+        --soft: #eef3f9;
+        --blue: #2563eb;
+        --teal: #0f766e;
+        --violet: #7c3aed;
+        --amber: #b45309;
+        --rose: #be123c;
+        --code-bg: #0f172a;
+        --code-ink: #e5e7eb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.58;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 44px 0 72px;
+      }
+
+      header {
+        margin-bottom: 24px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 34px;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 22px;
+      }
+
+      h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      code {
+        border-radius: 6px;
+        background: #e8eef6;
+        padding: 2px 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+        overflow-wrap: anywhere;
+      }
+
+      pre {
+        overflow-x: auto;
+        border-radius: 8px;
+        background: var(--code-bg);
+        color: var(--code-ink);
+        padding: 16px;
+        line-height: 1.55;
+      }
+
+      pre code {
+        background: transparent;
+        color: inherit;
+        padding: 0;
+      }
+
+      .subtitle {
+        max-width: 820px;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 24px;
+        margin: 18px 0;
+      }
+
+      .top-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcff;
+        padding: 14px;
+        min-height: 92px;
+      }
+
+      .label {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .value {
+        display: block;
+        margin-top: 7px;
+        font-weight: 750;
+        word-break: break-word;
+      }
+
+      .diagram {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(145px, 1fr));
+        gap: 14px;
+        align-items: stretch;
+      }
+
+      .node {
+        position: relative;
+        border: 1px solid var(--line);
+        border-top: 5px solid var(--blue);
+        border-radius: 8px;
+        background: #fbfcff;
+        padding: 15px;
+        min-height: 134px;
+      }
+
+      .node.teal {
+        border-top-color: var(--teal);
+      }
+
+      .node.violet {
+        border-top-color: var(--violet);
+      }
+
+      .node.amber {
+        border-top-color: var(--amber);
+      }
+
+      .node.rose {
+        border-top-color: var(--rose);
+      }
+
+      .node p {
+        color: var(--muted);
+        font-size: 14px;
+        margin-bottom: 0;
+      }
+
+      .arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-weight: 800;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .flow .node {
+        min-height: 112px;
+      }
+
+      .columns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 28px;
+        align-items: start;
+      }
+
+      .columns > div {
+        min-width: 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .pill {
+        display: inline-block;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--soft);
+        padding: 4px 9px;
+        margin: 2px 3px 2px 0;
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .note {
+        border-left: 4px solid var(--amber);
+        background: #fff8eb;
+      }
+
+      .file-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .file-item {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcff;
+        padding: 12px;
+      }
+
+      .file-item code {
+        display: inline-block;
+        max-width: 100%;
+        margin-bottom: 6px;
+      }
+
+      .file-item p {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 0;
+      }
+
+      .security-points {
+        display: grid;
+        gap: 10px;
+      }
+
+      .security-points p {
+        border-left: 3px solid var(--teal);
+        padding-left: 12px;
+        margin: 0;
+      }
+
+      .svg-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcff;
+        padding: 16px;
+      }
+
+      .architecture-svg {
+        display: block;
+        width: 100%;
+        min-width: 980px;
+        height: auto;
+      }
+
+      .architecture-svg text {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+
+      .architecture-svg .box {
+        fill: #ffffff;
+        stroke: #cfd8e5;
+        stroke-width: 1.4;
+        rx: 8;
+      }
+
+      .architecture-svg .aws {
+        fill: #f8fbff;
+        stroke: #93b4f5;
+      }
+
+      .architecture-svg .local {
+        fill: #f8fffc;
+        stroke: #76b7a6;
+      }
+
+      .architecture-svg .store {
+        fill: #fffaf0;
+        stroke: #e2b76b;
+      }
+
+      .architecture-svg .title {
+        fill: #172033;
+        font-size: 15px;
+        font-weight: 750;
+      }
+
+      .architecture-svg .small {
+        fill: #667085;
+        font-size: 12px;
+      }
+
+      .architecture-svg .region {
+        fill: #334155;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .architecture-svg .arrow {
+        stroke: #64748b;
+        stroke-width: 2;
+        fill: none;
+        marker-end: url(#arrowhead);
+      }
+
+      .architecture-svg .async {
+        stroke-dasharray: 6 5;
+      }
+
+      .architecture-svg .boundary {
+        fill: transparent;
+        stroke: #cbd5e1;
+        stroke-width: 1.2;
+        stroke-dasharray: 7 5;
+        rx: 10;
+      }
+
+      .ok {
+        color: var(--teal);
+        font-weight: 750;
+      }
+
+      .off {
+        color: var(--amber);
+        font-weight: 750;
+      }
+
+      @media (max-width: 980px) {
+        .top-grid,
+        .diagram,
+        .columns {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .arrow {
+          min-height: 22px;
+          transform: rotate(90deg);
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          width: min(100% - 20px, 1180px);
+          padding-top: 28px;
+        }
+
+        h1 {
+          font-size: 27px;
+        }
+
+        .top-grid,
+        .diagram,
+        .columns {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>AWS Serverless Portfolio 전체 구조 지도</h1>
+        <p class="subtitle">
+          현재 프로젝트가 프론트엔드, 백엔드 API, AWS 호스팅, V2 로컬 AI 챗봇까지 어떻게 이어지는지
+          한눈에 보기 위한 문서다.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>한 줄 요약</h2>
+        <p>
+          React 정적 사이트는 S3에 저장되고 CloudFront/Route 53을 통해 <code>shinseong.dev</code>로 제공된다.
+          화면은 API Gateway를 호출하고, 일반 프로필 API는 Lambda에서 바로 응답한다.
+          챗봇은 AWS가 질문을 SQS에 넣고, MacBook의 local agent가 Docker 안의 llama.cpp 모델로 답변을 만들어 DynamoDB에 저장하는 구조다.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>핵심 주소와 위치</h2>
+        <div class="top-grid">
+          <div class="metric">
+            <span class="label">Website</span>
+            <span class="value"><code>https://shinseong.dev</code></span>
+          </div>
+          <div class="metric">
+            <span class="label">API Gateway</span>
+            <span class="value"><code>ca-central-1 / Prod</code></span>
+          </div>
+          <div class="metric">
+            <span class="label">Frontend Hosting</span>
+            <span class="value"><code>S3 private + CloudFront OAC</code></span>
+          </div>
+          <div class="metric">
+            <span class="label">Chat Status</span>
+            <span class="value"><span class="off">currently disabled</span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>전체 요청 흐름</h2>
+        <div class="svg-wrap" aria-label="전체 AWS 및 로컬 AI 아키텍처 다이어그램">
+          <svg class="architecture-svg" viewBox="0 0 1120 610" role="img">
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L9,3 z" fill="#64748b"></path>
+              </marker>
+            </defs>
+
+            <rect class="boundary" x="24" y="34" width="680" height="238"></rect>
+            <text class="region" x="42" y="58">STATIC WEBSITE HOSTING</text>
+
+            <rect class="boundary" x="736" y="34" width="360" height="238"></rect>
+            <text class="region" x="754" y="58">AWS BACKEND - ca-central-1</text>
+
+            <rect class="boundary" x="24" y="320" width="1072" height="244"></rect>
+            <text class="region" x="42" y="344">LOCAL MACBOOK AI WORKER</text>
+
+            <rect class="box" x="54" y="94" width="140" height="92"></rect>
+            <text class="title" x="82" y="124">Browser</text>
+            <text class="small" x="76" y="148">React SPA</text>
+            <text class="small" x="72" y="166">shinseong.dev</text>
+
+            <rect class="aws" x="244" y="94" width="140" height="92"></rect>
+            <text class="title" x="284" y="124">Route 53</text>
+            <text class="small" x="273" y="148">Alias record</text>
+            <text class="small" x="280" y="166">Global DNS</text>
+
+            <rect class="aws" x="434" y="94" width="140" height="92"></rect>
+            <text class="title" x="466" y="124">CloudFront</text>
+            <text class="small" x="466" y="148">HTTPS cache</text>
+            <text class="small" x="471" y="166">OAC to S3</text>
+
+            <rect class="store" x="54" y="206" width="140" height="46"></rect>
+            <text class="title" x="91" y="234">ACM</text>
+            <text class="small" x="78" y="248">us-east-1 cert</text>
+
+            <rect class="store" x="434" y="206" width="140" height="46"></rect>
+            <text class="title" x="481" y="234">S3</text>
+            <text class="small" x="458" y="248">private static files</text>
+
+            <rect class="aws" x="770" y="94" width="144" height="92"></rect>
+            <text class="title" x="798" y="124">API Gateway</text>
+            <text class="small" x="800" y="148">Prod stage</text>
+            <text class="small" x="797" y="166">throttled 5/s</text>
+
+            <rect class="aws" x="944" y="70" width="126" height="72"></rect>
+            <text class="title" x="970" y="100">Portfolio</text>
+            <text class="small" x="970" y="121">Lambda</text>
+
+            <rect class="aws" x="944" y="166" width="126" height="72"></rect>
+            <text class="title" x="970" y="196">Local AI</text>
+            <text class="small" x="970" y="217">Lambda</text>
+
+            <rect class="store" x="770" y="380" width="144" height="76"></rect>
+            <text class="title" x="802" y="410">DynamoDB</text>
+            <text class="small" x="805" y="433">chat-requests</text>
+
+            <rect class="store" x="770" y="472" width="144" height="76"></rect>
+            <text class="title" x="824" y="502">SQS</text>
+            <text class="small" x="817" y="525">chat-jobs</text>
+
+            <rect class="local" x="478" y="426" width="148" height="76"></rect>
+            <text class="title" x="511" y="456">SQS Agent</text>
+            <text class="small" x="499" y="479">MacBook worker</text>
+
+            <rect class="local" x="264" y="426" width="148" height="76"></rect>
+            <text class="title" x="300" y="456">Gateway</text>
+            <text class="small" x="293" y="479">safety + prompt</text>
+
+            <rect class="local" x="54" y="426" width="148" height="76"></rect>
+            <text class="title" x="82" y="456">Docker Model</text>
+            <text class="small" x="73" y="479">llama.cpp :8080</text>
+
+            <path class="arrow" d="M194 140 H244"></path>
+            <path class="arrow" d="M384 140 H434"></path>
+            <path class="arrow" d="M504 186 V206"></path>
+            <path class="arrow" d="M194 229 H434"></path>
+            <path class="arrow" d="M574 140 H770"></path>
+            <path class="arrow" d="M914 122 H944"></path>
+            <path class="arrow" d="M914 166 H944"></path>
+            <path class="arrow async" d="M1007 238 C1007 302 914 330 842 380"></path>
+            <path class="arrow async" d="M944 202 C886 226 842 330 842 472"></path>
+            <path class="arrow async" d="M770 510 H626"></path>
+            <path class="arrow" d="M478 464 H412"></path>
+            <path class="arrow" d="M264 464 H202"></path>
+            <path class="arrow async" d="M552 426 C622 360 740 362 842 380"></path>
+
+            <text class="small" x="605" y="132">fetch API</text>
+            <text class="small" x="922" y="315">state update</text>
+            <text class="small" x="652" y="492">long poll</text>
+            <text class="small" x="225" y="448">local call</text>
+          </svg>
+        </div>
+
+        <div class="diagram">
+          <div class="node">
+            <h3>User Browser</h3>
+            <p><code>shinseong.dev</code> 접속. React 앱 실행.</p>
+          </div>
+          <div class="node teal">
+            <h3>Route 53</h3>
+            <p>도메인을 CloudFront distribution으로 연결.</p>
+          </div>
+          <div class="node violet">
+            <h3>CloudFront</h3>
+            <p>HTTPS, 캐시, S3 private origin 접근.</p>
+          </div>
+          <div class="node amber">
+            <h3>S3 Bucket</h3>
+            <p><code>frontend/dist</code> 정적 파일 저장. Public access 차단.</p>
+          </div>
+          <div class="node rose">
+            <h3>API Gateway</h3>
+            <p>React가 런타임에 <code>/health</code>, <code>/profile</code>, <code>/chat</code> 호출.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>프론트엔드 구조</h2>
+        <div class="columns">
+          <div>
+            <h3>역할</h3>
+            <p>
+              <code>frontend/</code>는 Vite + React + TypeScript 정적 앱이다.
+              빌드하면 HTML/CSS/JS 정적 파일이 되고, 이 파일들이 S3에 올라간다.
+            </p>
+            <p>
+              탭은 <code>Home</code>, <code>Projects</code>, <code>Resume</code>,
+              <code>AI Roadmap</code>, <code>AI Chat</code>으로 구성된다.
+            </p>
+          </div>
+          <div>
+            <h3>주요 파일</h3>
+            <table>
+              <tbody>
+                <tr>
+                  <td><code>frontend/src/App.tsx</code></td>
+                  <td>화면 탭, API 상태, 채팅 UI</td>
+                </tr>
+                <tr>
+                  <td><code>frontend/src/api.ts</code></td>
+                  <td><code>/health</code>, <code>/profile</code> 호출</td>
+                </tr>
+                <tr>
+                  <td><code>frontend/src/chatApi.ts</code></td>
+                  <td><code>POST /chat</code>, <code>GET /chat/{requestId}</code> polling</td>
+                </tr>
+                <tr>
+                  <td><code>frontend/public/chat-config.json</code></td>
+                  <td>채팅 UI 활성/비활성 설정</td>
+                </tr>
+                <tr>
+                  <td><code>frontend/src/styles.css</code></td>
+                  <td>전체 UI 스타일</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>백엔드 API 구조</h2>
+        <div class="columns">
+          <div>
+            <h3>V1 Portfolio API</h3>
+            <p>
+              <code>PortfolioApiFunction</code>은 기본 포트폴리오 데이터를 제공한다.
+              API 연결 상태와 프로필/프로젝트/자격증 정보를 React 앱에 전달한다.
+            </p>
+            <p>
+              <span class="pill">GET /health</span>
+              <span class="pill">GET /profile</span>
+              <span class="pill">OPTIONS</span>
+            </p>
+          </div>
+          <div>
+            <h3>V2 Local AI API</h3>
+            <p>
+              <code>LocalAiFunction</code>은 채팅 요청을 직접 모델에 보내지 않는다.
+              입력을 검증하고 DynamoDB에 <code>PENDING</code> 상태를 저장한 뒤 SQS에 job을 넣는다.
+            </p>
+            <p>
+              <span class="pill">POST /chat</span>
+              <span class="pill">GET /chat/{requestId}</span>
+              <span class="pill">OPTIONS</span>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>챗봇 처리 흐름</h2>
+        <div class="flow">
+          <div class="node">
+            <h3>1. React AI Chat</h3>
+            <p>사용자가 질문 입력. <code>postChat()</code>이 <code>POST /chat</code> 호출.</p>
+          </div>
+          <div class="arrow">→</div>
+          <div class="node teal">
+            <h3>2. LocalAiFunction</h3>
+            <p>입력 검증 후 DynamoDB에 <code>PENDING</code> 저장, SQS에 작업 발행.</p>
+          </div>
+          <div class="arrow">→</div>
+          <div class="node violet">
+            <h3>3. MacBook Agent</h3>
+            <p><code>sqs_agent.py</code>가 SQS long polling으로 질문을 가져감.</p>
+          </div>
+          <div class="arrow">→</div>
+          <div class="node amber">
+            <h3>4. Docker Model</h3>
+            <p><code>llama.cpp</code> 서버의 <code>/v1/chat/completions</code>로 로컬 추론.</p>
+          </div>
+        </div>
+        <p style="margin-top: 16px">
+          답변 생성 후 agent가 DynamoDB 항목을 <code>DONE</code> 또는 <code>ERROR</code>로 업데이트한다.
+          React는 <code>GET /chat/{requestId}</code>를 반복 호출해서 결과를 가져온다.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>AWS 리소스 지도</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>영역</th>
+              <th>리소스</th>
+              <th>리전</th>
+              <th>역할</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>도메인</td>
+              <td><code>Route 53 Hosted Zone</code></td>
+              <td>Global</td>
+              <td><code>shinseong.dev</code>를 CloudFront로 연결</td>
+            </tr>
+            <tr>
+              <td>HTTPS 인증서</td>
+              <td><code>ACM Certificate</code></td>
+              <td><code>us-east-1</code></td>
+              <td>CloudFront에 붙는 TLS 인증서. CloudFront용 ACM은 us-east-1 필요.</td>
+            </tr>
+            <tr>
+              <td>정적 호스팅</td>
+              <td><code>CloudFront Distribution</code></td>
+              <td>Global</td>
+              <td>HTTPS, 캐시, S3 origin 보호 접근</td>
+            </tr>
+            <tr>
+              <td>정적 파일</td>
+              <td><code>S3 PortfolioBucket</code></td>
+              <td><code>us-east-1</code></td>
+              <td>React 빌드 결과물 저장. Public access 차단.</td>
+            </tr>
+            <tr>
+              <td>API</td>
+              <td><code>API Gateway</code></td>
+              <td><code>ca-central-1</code></td>
+              <td>프론트에서 Lambda를 호출하는 HTTP 엔드포인트</td>
+            </tr>
+            <tr>
+              <td>Portfolio API</td>
+              <td><code>PortfolioApiFunction</code></td>
+              <td><code>ca-central-1</code></td>
+              <td><code>/health</code>, <code>/profile</code> 응답</td>
+            </tr>
+            <tr>
+              <td>Chat API</td>
+              <td><code>LocalAiFunction</code></td>
+              <td><code>ca-central-1</code></td>
+              <td>채팅 요청 접수, 상태 조회, SQS enqueue</td>
+            </tr>
+            <tr>
+              <td>Queue</td>
+              <td><code>chat-jobs</code></td>
+              <td><code>ca-central-1</code></td>
+              <td>MacBook local agent가 가져갈 질문 job 저장</td>
+            </tr>
+            <tr>
+              <td>State</td>
+              <td><code>chat-requests</code></td>
+              <td><code>ca-central-1</code></td>
+              <td>채팅 요청 상태와 답변 저장. TTL 3600초.</td>
+            </tr>
+            <tr>
+              <td>Logs</td>
+              <td><code>CloudWatch Logs</code></td>
+              <td><code>ca-central-1</code></td>
+              <td>Lambda 로그. Local AI 함수는 14일 보관.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>로컬 AI 구성</h2>
+        <div class="columns">
+          <div>
+            <h3>MacBook에서 실행되는 것</h3>
+            <div class="file-list">
+              <div class="file-item">
+                <code>local_ai/harness/docker-compose.yml</code>
+                <p>Docker 안에서 llama.cpp server 실행</p>
+              </div>
+              <div class="file-item">
+                <code>local_ai/harness/harness/sqs_agent.py</code>
+                <p>SQS polling, 모델 호출, DynamoDB 업데이트</p>
+              </div>
+              <div class="file-item">
+                <code>local_ai/harness/harness/model_gateway.py</code>
+                <p>입력 검증, context 로드, 모델 호출, 출력 검증</p>
+              </div>
+              <div class="file-item">
+                <code>local_ai/harness/harness/container_model_client.py</code>
+                <p><code>http://127.0.0.1:8080/v1/chat/completions</code> 호출</p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3>보안 의도</h3>
+            <div class="security-points">
+              <p>
+                모델은 Docker 컨테이너 안에서만 실행된다.
+                앱은 <code>localhost:8080</code>으로만 통신한다.
+              </p>
+              <p>
+                oMLX/pi/Hermes 경로를 사용하지 않는다.
+                Docker socket, AWS credential, SSH key, Home directory는 컨테이너에 마운트하지 않는다.
+              </p>
+              <p>
+                모델 context는 <code>local_ai/harness/context/</code>와
+                <code>local_ai/harness/prompts/system_prompt.md</code>를 기반으로 제한한다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>주요 환경변수</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>환경변수</th>
+              <th>사용 위치</th>
+              <th>의미</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>VITE_API_BASE_URL</code></td>
+              <td>Frontend build</td>
+              <td>React 앱이 호출할 API Gateway base URL</td>
+            </tr>
+            <tr>
+              <td><code>CHATBOT_ENABLED</code></td>
+              <td>LocalAiFunction</td>
+              <td>AWS Lambda에서 public chat intake 허용 여부. 현재 <code>false</code>.</td>
+            </tr>
+            <tr>
+              <td><code>CHAT_REQUEST_TABLE</code></td>
+              <td>LocalAiFunction, local agent</td>
+              <td>DynamoDB 테이블 이름. 현재 <code>chat-requests</code>.</td>
+            </tr>
+            <tr>
+              <td><code>CHAT_QUEUE_URL</code></td>
+              <td>LocalAiFunction, local agent</td>
+              <td>SQS queue URL. agent 실행 시 필요.</td>
+            </tr>
+            <tr>
+              <td><code>LOCAL_AI_BACKEND</code></td>
+              <td>Local agent, CLI harness</td>
+              <td><code>mock</code> 또는 <code>container</code> 선택.</td>
+            </tr>
+            <tr>
+              <td><code>CONTAINER_MODEL_ENDPOINT</code></td>
+              <td>Container model client</td>
+              <td>기본값 <code>http://127.0.0.1:8080/v1/chat/completions</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card note">
+        <h2>현재 운영 상태</h2>
+        <p>
+          AWS 리소스는 배포되어 있지만, 공개 채팅은 안전하게 꺼진 상태다.
+          <code>frontend/public/chat-config.json</code>의 <code>enabled</code>가 <code>false</code>이고,
+          Lambda 환경변수 <code>CHATBOT_ENABLED</code>도 <code>false</code>다.
+        </p>
+        <p>
+          즉, 사이트와 API는 배포되어 있지만 방문자가 실제 로컬 모델로 질문을 보내는 단계는 아직 열려 있지 않다.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>배포 단위</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>작업</th>
+              <th>명령 위치</th>
+              <th>결과</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Backend deploy</td>
+              <td><code>backend/</code></td>
+              <td><code>sam build</code>, <code>sam deploy</code>로 Lambda/API Gateway/DynamoDB/SQS 업데이트</td>
+            </tr>
+            <tr>
+              <td>Frontend deploy</td>
+              <td><code>frontend/</code></td>
+              <td><code>npm run build</code> 후 <code>aws s3 sync dist s3://...</code></td>
+            </tr>
+            <tr>
+              <td>Cache refresh</td>
+              <td>프로젝트 루트</td>
+              <td><code>aws cloudfront create-invalidation --paths "/*"</code></td>
+            </tr>
+            <tr>
+              <td>Local AI run</td>
+              <td><code>local_ai/harness/</code> + 프로젝트 루트</td>
+              <td>Docker model server와 <code>harness.sqs_agent</code> 실행</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>프로젝트 폴더 역할</h2>
+        <table>
+          <tbody>
+            <tr>
+              <td><code>frontend/</code></td>
+              <td>React 정적 포트폴리오 앱</td>
+            </tr>
+            <tr>
+              <td><code>backend/</code></td>
+              <td>SAM 기반 AWS API 인프라와 Lambda 함수</td>
+            </tr>
+            <tr>
+              <td><code>infra/</code></td>
+              <td>S3, CloudFront, Route 53 프론트 호스팅 템플릿</td>
+            </tr>
+            <tr>
+              <td><code>local_ai/harness/</code></td>
+              <td>로컬 모델 client, safety, prompt, SQS agent, CLI 테스트 harness</td>
+            </tr>
+            <tr>
+              <td><code>scripts/</code></td>
+              <td>local agent 시작/종료 보조 스크립트</td>
+            </tr>
+            <tr>
+              <td><code>docs/</code></td>
+              <td>배포 기록, 운영 문서, 구조 문서</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>핵심 체크포인트</h2>
+        <p>
+          <span class="pill">S3는 private</span>
+          <span class="pill">CloudFront OAC만 S3 읽기 가능</span>
+          <span class="pill">API는 ca-central-1</span>
+          <span class="pill">CloudFront 인증서는 us-east-1</span>
+          <span class="pill">채팅은 SQS 비동기 방식</span>
+          <span class="pill">MacBook에 inbound port 필요 없음</span>
+          <span class="pill">현재 public chat disabled</span>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
