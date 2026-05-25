@@ -48,6 +48,17 @@ JSON
   rm -f "${tmp_file}"
 }
 
+invalidate_chat_config() {
+  if [[ -z "${CLOUDFRONT_DISTRIBUTION_ID:-}" ]]; then
+    return
+  fi
+
+  aws cloudfront create-invalidation \
+    --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+    --paths "/${CHAT_CONFIG_KEY}" \
+    --profile "${AWS_PROFILE}" >/dev/null
+}
+
 update_lambda_chatbot_enabled() {
   local enabled="$1"
   local current_env
@@ -92,6 +103,7 @@ require_var FRONTEND_BUCKET
 require_var LOCAL_AI_FUNCTION_NAME
 
 upload_chat_config
+invalidate_chat_config
 
 update_lambda_chatbot_enabled false
 

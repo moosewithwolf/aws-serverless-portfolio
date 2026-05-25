@@ -52,6 +52,17 @@ JSON
   rm -f "${tmp_file}"
 }
 
+invalidate_chat_config() {
+  if [[ -z "${CLOUDFRONT_DISTRIBUTION_ID:-}" ]]; then
+    return
+  fi
+
+  aws cloudfront create-invalidation \
+    --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+    --paths "/${CHAT_CONFIG_KEY}" \
+    --profile "${AWS_PROFILE}" >/dev/null
+}
+
 update_lambda_chatbot_enabled() {
   local enabled="$1"
   local current_env
@@ -99,11 +110,6 @@ require_var LOCAL_AI_FUNCTION_NAME
 
 mkdir -p "${ROOT_DIR}/.agent"
 
-if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
-  echo "Agent is already running with PID $(cat "${PID_FILE}")."
-  exit 0
-fi
-
 docker compose -f "${COMPOSE_FILE}" up -d
 
 export PYTHONPATH="${ROOT_DIR}/local_ai/harness"
@@ -111,11 +117,16 @@ export CHAT_REQUEST_TABLE
 export CHAT_QUEUE_URL
 export LOCAL_AI_BACKEND
 
-nohup "${ROOT_DIR}/.venv/bin/python" -m harness.sqs_agent > "${LOG_FILE}" 2>&1 &
-echo "$!" > "${PID_FILE}"
+if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
+  echo "Agent is already running with PID $(cat "${PID_FILE}")."
+else
+  nohup "${ROOT_DIR}/.venv/bin/python" -m harness.sqs_agent > "${LOG_FILE}" 2>&1 &
+  echo "$!" > "${PID_FILE}"
+fi
 
 update_lambda_chatbot_enabled true
 upload_chat_config true "Chat is online."
+invalidate_chat_config
 
 echo "Agent started with PID $(cat "${PID_FILE}")."
 echo "Log: ${LOG_FILE}"
