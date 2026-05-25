@@ -61,5 +61,5 @@ class ChatStatusResponse(BaseModel):
     )
     message: str = Field(
         default="",
-        description="Optional status message (e.g., error reason on FAILED).",
+        description="Optional status message (e.g., error reason on ERROR).",
     )
