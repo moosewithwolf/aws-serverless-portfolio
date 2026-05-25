@@ -3,17 +3,24 @@
 Routes incoming API Gateway events to the harness, applies safety
 validation, serialises responses with camelCase keys, and returns
 the standard API Gateway proxy integration envelope.
+
+Phase 3 — AWS async chat relay:
+- POST /chat validates input, stores PENDING in DynamoDB, sends SQS message,
+  and returns { requestId, status: "PENDING" }.
+- GET /chat/<requestId> reads from DynamoDB and returns the current status.
 """
 
 from __future__ import annotations
 
 import json
+import os
+import time
 import uuid
 from typing import Any
 
+import boto3
+
 from harness.contracts import ChatRequest, ChatResponse, ChatStatus, ChatStatusResponse
-from harness import get_backend
-from harness.container_model_client import ContainerModelError
 from harness.prompt_builder import load_context
 from harness.safety import validate_input, validate_output
 
@@ -28,6 +35,57 @@ CORS_HEADERS: dict[str, str] = {
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
 }
 
+# ---------------------------------------------------------------------------
+# Safe fallback when output safety fails
+# ---------------------------------------------------------------------------
+
+SAFE_FALLBACK_MESSAGE = (
+    "I cannot share that information. Please ask about my skills, "
+    "projects, certifications, education, or AWS architecture."
+)
+
+# ---------------------------------------------------------------------------
+# AWS resource helpers (lazy client creation, testable via patching)
+# ---------------------------------------------------------------------------
+
+
+def _chat_table_name() -> str:
+    """Return the DynamoDB table name from environment."""
+    return os.environ.get("CHAT_REQUEST_TABLE", "")
+
+
+def _chat_queue_url() -> str:
+    """Return the SQS queue URL from environment."""
+    return os.environ.get("CHAT_QUEUE_URL", "")
+
+
+def _chat_ttl_seconds() -> int:
+    """Return the TTL in seconds from environment."""
+    try:
+        return int(os.environ.get("CHAT_TTL_SECONDS", "3600"))
+    except (ValueError, TypeError):
+        return 3600
+
+
+def _now_epoch() -> int:
+    """Return the current epoch time in seconds (int)."""
+    return int(time.time())
+
+
+def _ttl_epoch() -> int:
+    """Return the TTL expiration epoch timestamp."""
+    return _now_epoch() + _chat_ttl_seconds()
+
+
+def _ddb_resource():
+    """Return a DynamoDB resource (lazy, testable via patching)."""
+    return boto3.resource("dynamodb")
+
+
+def _sqs_resource():
+    """Return an SQS resource (lazy, testable via patching)."""
+    return boto3.resource("sqs")
+
 
 # ---------------------------------------------------------------------------
 # Lambda entry point
@@ -37,7 +95,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """API Gateway Lambda handler for the chat endpoint.
 
     Handles:
-    - POST /chat   — submit a message
+    - POST /chat   — submit a message (async relay)
     - GET  /chat/<requestId> — poll status
     - OPTIONS      — CORS preflight
     """
@@ -61,10 +119,15 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# POST /chat — handle incoming chat message
+# POST /chat — async relay: validate, store PENDING, enqueue SQS
 # ---------------------------------------------------------------------------
 
 def _handle_chat_post(event: dict[str, Any]) -> dict[str, Any]:
+    """Handle an incoming chat message via async relay.
+
+    Validates input, stores PENDING state in DynamoDB, sends an SQS job,
+    and returns requestId with status PENDING.
+    """
     # Parse and validate request body
     try:
         body = json.loads(event.get("body", "{}"))
@@ -81,58 +144,152 @@ def _handle_chat_post(event: dict[str, Any]) -> dict[str, Any]:
     if not is_safe:
         return _response(400, {"message": reason, "sanitized": False})
 
-    # Build context
-    context_text = load_context()
-    full_prompt = _build_prompt(request.message, context_text)
+    # Generate requestId
+    request_id = f"chat_{uuid.uuid4().hex}"
 
-    # Generate response via selected backend (mock or container)
-    backend = get_backend()
-    try:
-        raw_response = backend.generate(full_prompt)
-    except ContainerModelError:
-        # Backend failure → return safe error to caller
-        error_response = ChatResponse(
-            request_id=_generate_request_id(),
-            status=ChatStatus.ERROR,
-            message="The model service is temporarily unavailable. Please try again later.",
-            sanitized=False,
+    # Store PENDING state in DynamoDB
+    ddb_ok = _store_pending_request(request_id, request.message)
+    if not ddb_ok:
+        return _response(
+            503, {
+                "status": "ERROR",
+                "message": "Service unavailable. Please try again later.",
+                "sanitized": False,
+            }
         )
-        return _response(503, _to_camel_case(_model_to_dict(error_response)))
 
-    # Output safety check
-    output_safe, _ = validate_output(raw_response)
+    # Send SQS message
+    sqs_ok = _send_chat_job(request_id, request.message)
+    if not sqs_ok:
+        return _response(
+            503, {
+                "status": "ERROR",
+                "message": "Service unavailable. Please try again later.",
+                "sanitized": False,
+            }
+        )
 
-    # If output fails safety check, replace with safe fallback
-    if not output_safe:
-        raw_response = "I cannot share that information. Please ask about my skills, projects, certifications, education, or AWS architecture."
+    # Return 202 Accepted with PENDING status
+    response_data = {
+        "requestId": request_id,
+        "status": ChatStatus.PENDING.value,
+    }
+    return _response(202, _to_camel_case(response_data))
 
-    # Build response with camelCase keys for the frontend
-    response = ChatResponse(
-        request_id=_generate_request_id(),
-        status=ChatStatus.DONE,
-        message=raw_response,
-        sanitized=output_safe,
-    )
 
-    return _response(200, _to_camel_case(_model_to_dict(response)))
+def _store_pending_request(request_id: str, message: str) -> bool:
+    """Store a PENDING chat request in DynamoDB.
+
+    Returns True on success, False if the table name is missing
+    or the put_item call fails.
+    """
+    table_name = _chat_table_name()
+    if not table_name:
+        return False
+
+    try:
+        ddb = _ddb_resource()
+        table = ddb.Table(table_name)
+        table.put_item(
+            Item={
+                "requestId": request_id,
+                "status": ChatStatus.PENDING.value,
+                "message": message,
+                "createdAt": _now_epoch(),
+                "ttl": _ttl_epoch(),
+            }
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _send_chat_job(request_id: str, message: str) -> bool:
+    """Send a chat job to the SQS queue.
+
+    Returns True on success, False if the queue URL is missing
+    or the send_message call fails.
+    """
+    queue_url = _chat_queue_url()
+    if not queue_url:
+        return False
+
+    try:
+        sqs = _sqs_resource()
+        queue = sqs.Queue(queue_url)
+        queue.send_message(
+            MessageBody=json.dumps({
+                "requestId": request_id,
+                "message": message,
+            }),
+        )
+        return True
+    except Exception:
+        return False
 
 
 # ---------------------------------------------------------------------------
-# GET /chat/<requestId> — poll status
+# GET /chat/<requestId> — poll status from DynamoDB
 # ---------------------------------------------------------------------------
 
 def _handle_chat_get(request_id: str) -> dict[str, Any]:
-    """Poll endpoint — returns the latest status for a request ID.
+    """Poll endpoint — reads status from DynamoDB.
 
-    In Phase 1 (mock backend, synchronous), the result is always DONE.
-    Later phases (DynamoDB persistence, SQS) will store intermediate
-    states here.
+    Returns:
+    - 404 if request not found
+    - 200 with PENDING/DONE/ERROR status
+    - Never exposes internal errors
     """
-    status_resp = ChatStatusResponse(
-        status=ChatStatus.DONE,
-        message="Processing complete.",
-    )
-    return _response(200, _to_camel_case(_model_to_dict(status_resp)))
+    table_name = _chat_table_name()
+    if not table_name:
+        return _response(404, {"message": "Request not found"})
+
+    try:
+        ddb = _ddb_resource()
+        table = ddb.Table(table_name)
+        response = table.get_item(Key={"requestId": request_id})
+    except Exception:
+        return _response(
+            503, {
+                "status": "ERROR",
+                "message": "Service unavailable. Please try again later.",
+                "sanitized": False,
+            }
+        )
+
+    item = response.get("Item")
+    if not item:
+        return _response(404, {"message": "Request not found"})
+
+    status = item.get("status", ChatStatus.PENDING.value)
+
+    if status == ChatStatus.PENDING.value:
+        return _response(200, _to_camel_case({
+            "requestId": request_id,
+            "status": ChatStatus.PENDING.value,
+        }))
+
+    if status == ChatStatus.DONE.value:
+        return _response(200, _to_camel_case({
+            "requestId": request_id,
+            "status": ChatStatus.DONE.value,
+            "message": item.get("message", ""),
+            "sanitized": True,
+        }))
+
+    if status == ChatStatus.ERROR.value:
+        return _response(200, _to_camel_case({
+            "requestId": request_id,
+            "status": ChatStatus.ERROR.value,
+            "message": item.get("message", "Processing failed. Please try again later."),
+            "sanitized": False,
+        }))
+
+    # Unknown status — treat as PENDING
+    return _response(200, _to_camel_case({
+        "requestId": request_id,
+        "status": ChatStatus.PENDING.value,
+    }))
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +297,10 @@ def _handle_chat_get(request_id: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _build_prompt(message: str, context: str | None) -> str:
-    """Build the full prompt sent to the model."""
+    """Build the full prompt sent to the model.
+
+    Used by CLI harness (run_chat.py), not by Lambda POST /chat.
+    """
     parts: list[str] = []
     if context:
         parts.append(f"Context:\n{context}")
@@ -148,18 +308,11 @@ def _build_prompt(message: str, context: str | None) -> str:
     return "\n\n".join(parts)
 
 
-def _generate_request_id() -> str:
-    """Generate a simple request ID for tracking."""
-    return uuid.uuid4().hex[:12]
-
-
 def _model_to_dict(model: Any) -> dict[str, Any]:
     """Convert a Pydantic model to a snake_case dict."""
     if hasattr(model, "model_dump"):
-        # Pydantic v2
         return model.model_dump()  # type: ignore[attr-defined]
     elif hasattr(model, "dict"):
-        # Pydantic v1
         return model.dict()
     return {}
 
