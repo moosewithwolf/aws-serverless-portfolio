@@ -8,6 +8,37 @@ Globals:
     Timeout: 3
 
 Resources:
+  LocalAiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../local_ai/harness/
+      Handler: harness.app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Timeout: 30
+      Events:
+        ChatPost:
+          Type: Api
+          Properties:
+            Path: /chat
+            Method: post
+        ChatOptions:
+          Type: Api
+          Properties:
+            Path: /chat
+            Method: options
+        ChatGet:
+          Type: Api
+          Properties:
+            Path: /chat/{requestId}
+            Method: get
+        ChatGetOptions:
+          Type: Api
+          Properties:
+            Path: /chat/{requestId}
+            Method: options
+
   PortfolioApiFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -51,3 +82,9 @@ Outputs:
   PortfolioApiFunctionIamRole:
     Description: "Implicit IAM Role created for the Portfolio API function"
     Value: !GetAtt PortfolioApiFunctionRole.Arn
+  LocalAiFunction:
+    Description: "Local AI Chatbot Lambda Function ARN"
+    Value: !GetAtt LocalAiFunction.Arn
+  LocalAiFunctionIamRole:
+    Description: "Implicit IAM Role created for the Local AI function"
+    Value: !GetAtt LocalAiFunctionRole.Arn
