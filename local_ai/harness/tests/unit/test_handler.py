@@ -113,7 +113,7 @@ def test_chat_post_output_safety_fallback():
         "You are a helpful portfolio assistant."
     )
 
-    with patch.object(app, "MockModelBackend") as MockBackend:
+    with patch.object(app, "get_backend") as MockBackend:
         mock_instance = MockBackend.return_value
         mock_instance.generate.return_value = unsafe_output
 
