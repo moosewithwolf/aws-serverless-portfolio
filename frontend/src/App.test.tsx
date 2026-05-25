@@ -41,6 +41,9 @@ describe("App", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
+        if (url.includes("/chat-config.json")) {
+          return new Response(JSON.stringify({ enabled: true }));
+        }
         if (url.endsWith("/health")) {
           return new Response(JSON.stringify({ status: "ok", service: "portfolio-api" }));
         }
@@ -80,6 +83,9 @@ describe("App", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
+        if (url.includes("/chat-config.json")) {
+          return new Response(JSON.stringify({ enabled: true }));
+        }
         if (url.endsWith("/health")) {
           return new Response(JSON.stringify({ status: "ok", service: "portfolio-api" }));
         }
@@ -109,7 +115,7 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: "AI Chat" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("No messages yet. Send a message to start the conversation!")).toBeInTheDocument();
+    expect(await screen.findByText("No messages yet. Send a message to start the conversation!")).toBeInTheDocument();
 
     // Type a message and send
     const textarea = document.querySelector("textarea.chat-input") as HTMLTextAreaElement;
@@ -123,6 +129,40 @@ describe("App", () => {
     expect(chatMessages!.textContent).toContain("Tell me about your skills");
     expect(chatMessages!.textContent).toContain("AI:");
     expect(chatMessages!.textContent).toContain("Hello! How can I help");
+  });
+
+  it("does not call chat APIs when chat config is disabled", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/chat-config.json")) {
+        return new Response(
+          JSON.stringify({ enabled: false, message: "Chat is currently offline." }),
+        );
+      }
+      if (url.endsWith("/health")) {
+        return new Response(JSON.stringify({ status: "ok", service: "portfolio-api" }));
+      }
+      if (url.endsWith("/profile")) {
+        return new Response(JSON.stringify(profile));
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    expect(await screen.findByText("Chat is currently offline.")).toBeInTheDocument();
+
+    const textarea = document.querySelector("textarea.chat-input") as HTMLTextAreaElement;
+    expect(textarea.disabled).toBe(true);
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+
+    const chatApiCalls = fetchMock.mock.calls.filter(([url]) => {
+      const value = String(url);
+      return value.includes("/chat") && !value.includes("/chat-config.json");
+    });
+    expect(chatApiCalls).toHaveLength(0);
   });
 
   it("shows an API failure state when the health check fails", async () => {
