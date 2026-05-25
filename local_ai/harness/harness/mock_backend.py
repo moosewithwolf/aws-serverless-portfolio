@@ -99,15 +99,31 @@ _PATTERNS: list[tuple[re.Pattern[str], str]] = [
 # ---------------------------------------------------------------------------
 
 class MockModelBackend:
-    """Keyword-based mock model with priority pattern matching."""
+    """Keyword-based mock model with priority pattern matching.
+
+    Security-sensitive pattern matching is applied **only** to the
+    user message portion of the prompt (text after ``\nUser: ``),
+    NOT the full prompt which includes system/context context that
+    may contain harmless matches (e.g. "shell access" in a system
+    prompt).
+    """
 
     def generate(self, prompt: str) -> str:
-        # Check security-sensitive patterns first (priority order)
+        # Extract the user message portion (everything after "\nUser: ")
+        # The prompt format is:
+        #   Context:\n...system/context...\n\nUser: <message>
+        # or simply "User: <message>"
+        user_message = prompt
+        if "\nUser: " in prompt:
+            user_message = prompt.split("\nUser: ", 1)[1]
+
+        # Check security-sensitive patterns only on the user message
         for pattern, keyword in _PATTERNS:
-            if pattern.search(prompt):
+            if pattern.search(user_message):
                 return _RESPONSES[keyword]
 
-        # Fall back to keyword matching
+        # Fall back to keyword matching (on full prompt so context keywords
+        # can still be matched)
         prompt_lower = prompt.lower()
         for keyword, response in _RESPONSES.items():
             if keyword in prompt_lower or keyword.replace("_", " ") in prompt_lower:

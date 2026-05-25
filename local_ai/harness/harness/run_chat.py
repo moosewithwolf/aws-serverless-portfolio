@@ -17,7 +17,8 @@ import sys
 import uuid
 
 from harness.contracts import ChatStatus
-from harness.mock_backend import MockModelBackend
+from harness import get_backend
+from harness.container_model_client import ContainerModelError
 from harness.prompt_builder import load_context
 from harness.safety import validate_input, validate_output
 
@@ -59,9 +60,18 @@ def main() -> None:
     context_text = load_context()
     full_prompt = _build_prompt(message, context_text)
 
-    # Generate response via mock backend
-    backend = MockModelBackend()
-    raw_response = backend.generate(full_prompt)
+    # Generate response via selected backend (mock or container)
+    backend = get_backend()
+    try:
+        raw_response = backend.generate(full_prompt)
+    except ContainerModelError:
+        print(json.dumps({
+            "requestId": uuid.uuid4().hex[:12],
+            "status": ChatStatus.ERROR.value,
+            "message": "The model service is temporarily unavailable. Please try again later.",
+            "sanitized": False,
+        }))
+        return
 
     # Output safety check
     output_safe, _ = validate_output(raw_response)
