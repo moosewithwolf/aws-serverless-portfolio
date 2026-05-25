@@ -16,6 +16,7 @@ import pytest
 
 from harness.sqs_agent import (
     _handle_message,
+    _receive_sqs_messages,
     _update_dynamodb,
     _delete_sqs_message,
     poll_once,
@@ -175,6 +176,45 @@ def test_valid_message_processes_and_deletes():
         assert delete_call.kwargs["ReceiptHandle"] == REAL_RECEIPT_HANDLE
     finally:
         ctx.cleanup()
+
+
+def test_receive_sqs_messages_supports_real_boto3_queue_shape():
+    """Real boto3 SQS Queue resources expose receive_messages(), not receive_message()."""
+    queue = MagicMock(spec=["receive_messages"])
+    message = MagicMock()
+    message.body = VALID_SQS_BODY
+    message.receipt_handle = REAL_RECEIPT_HANDLE
+    queue.receive_messages.return_value = [message]
+
+    result = _receive_sqs_messages(queue)
+
+    queue.receive_messages.assert_called_once_with(
+        MaxNumberOfMessages=1,
+        WaitTimeSeconds=20,
+    )
+    assert result == {
+        "Messages": [
+            {
+                "Body": VALID_SQS_BODY,
+                "ReceiptHandle": REAL_RECEIPT_HANDLE,
+            }
+        ]
+    }
+
+
+def test_delete_sqs_message_supports_real_boto3_queue_shape():
+    """Real boto3 SQS Queue resources delete through queue.meta.client."""
+    queue = MagicMock(spec=["meta"])
+    sqs = MagicMock()
+    sqs.Queue.return_value = queue
+
+    with patch("harness.sqs_agent._sqs_resource", return_value=sqs):
+        assert _delete_sqs_message("https://queue.url", REAL_RECEIPT_HANDLE) is True
+
+    queue.meta.client.delete_message.assert_called_once_with(
+        QueueUrl="https://queue.url",
+        ReceiptHandle=REAL_RECEIPT_HANDLE,
+    )
 
 
 # ---------------------------------------------------------------------------

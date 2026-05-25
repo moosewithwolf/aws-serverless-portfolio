@@ -60,11 +60,11 @@ def _now_epoch() -> int:
 
 
 def _sqs_resource():
-    return boto3.resource("sqs")
+    return boto3.resource("sqs", region_name=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION"))
 
 
 def _ddb_resource():
-    return boto3.resource("dynamodb")
+    return boto3.resource("dynamodb", region_name=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION"))
 
 
 # ---------------------------------------------------------------------------
@@ -192,11 +192,42 @@ def _delete_sqs_message(queue_url: str, receipt_handle: str) -> bool:
     try:
         sqs = _sqs_resource()
         queue = sqs.Queue(queue_url)
-        queue.delete_message(ReceiptHandle=receipt_handle)
+        delete_message = getattr(queue, "delete_message", None)
+        if callable(delete_message):
+            delete_message(ReceiptHandle=receipt_handle)
+        else:
+            queue.meta.client.delete_message(
+                QueueUrl=queue_url,
+                ReceiptHandle=receipt_handle,
+            )
         return True
     except Exception as exc:
         logger.error("SQS delete error: %s", exc)
         return False
+
+
+def _receive_sqs_messages(queue) -> dict:
+    """Receive SQS messages from either a real boto3 Queue or a test double."""
+    receive_message = getattr(queue, "receive_message", None)
+    if callable(receive_message):
+        return receive_message(
+            MaxNumberOfMessages=SQS_BATCH_SIZE,
+            WaitTimeSeconds=SQS_POLL_WAIT,
+        )
+
+    messages = queue.receive_messages(
+        MaxNumberOfMessages=SQS_BATCH_SIZE,
+        WaitTimeSeconds=SQS_POLL_WAIT,
+    )
+    return {
+        "Messages": [
+            {
+                "Body": message.body,
+                "ReceiptHandle": message.receipt_handle,
+            }
+            for message in messages
+        ]
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -212,10 +243,7 @@ def poll_once(table_name: str, queue_url: str) -> None:
         logger.error("Failed to get SQS queue: %s", exc)
         return
 
-    messages = queue.receive_message(
-        MaxNumberOfMessages=SQS_BATCH_SIZE,
-        WaitTimeSeconds=SQS_POLL_WAIT,
-    )
+    messages = _receive_sqs_messages(queue)
 
     for msg in messages.get("Messages", []):
         body = msg.get("Body", "")

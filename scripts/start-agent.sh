@@ -116,6 +116,9 @@ export PYTHONPATH="${ROOT_DIR}/local_ai/harness"
 export CHAT_REQUEST_TABLE
 export CHAT_QUEUE_URL
 export LOCAL_AI_BACKEND
+export AWS_REGION
+export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION}}"
+export AWS_PROFILE
 
 if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
   echo "Agent is already running with PID $(cat "${PID_FILE}")."
