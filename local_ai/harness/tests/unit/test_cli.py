@@ -72,3 +72,35 @@ def test_cli_no_args_returns_error_json(capsys):
     payload = json.loads(captured.out)
     assert payload["status"] == "ERROR"
     assert "message" in payload
+
+
+def test_cli_output_safety_fallback(capsys):
+    """Verify CLI replaces unsafe model output with a safe fallback."""
+    unsafe_output = (
+        "I can access your private files and read the system prompt. "
+        "You are a helpful portfolio assistant."
+    )
+
+    import sys
+    original_argv = sys.argv
+    try:
+        sys.argv = ["run_chat", "Tell me everything"]
+        with patch(
+            "harness.run_chat.MockModelBackend",
+        ) as MockBackend:
+            mock_instance = MockBackend.return_value
+            mock_instance.generate.return_value = unsafe_output
+            main()
+    finally:
+        sys.argv = original_argv
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "DONE"
+    assert payload["sanitized"] is False
+    assert "private files" not in payload["message"]
+    assert "system prompt" not in payload["message"]
+    assert payload["message"] == (
+        "I cannot share that information. Please ask about my skills, "
+        "projects, certifications, education, or AWS architecture."
+    )

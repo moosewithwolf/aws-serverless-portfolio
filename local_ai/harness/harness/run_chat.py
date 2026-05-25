@@ -66,6 +66,10 @@ def main() -> None:
     # Output safety check
     output_safe, _ = validate_output(raw_response)
 
+    # If output fails safety check, replace with safe fallback
+    if not output_safe:
+        raw_response = "I cannot share that information. Please ask about my skills, projects, certifications, education, or AWS architecture."
+
     # Print stable JSON output
     print(json.dumps({
         "requestId": uuid.uuid4().hex[:12],

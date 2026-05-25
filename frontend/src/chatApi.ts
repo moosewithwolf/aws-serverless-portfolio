@@ -4,7 +4,7 @@
  * Provides typed request/response models and HTTP operations:
  * - `postChat()` — POST a message and receive a request ID
  * - `pollChat()` — async generator that polls GET /chat/{requestId}
- *   until the status reaches a terminal state (DONE or FAILED).
+ *   until the status reaches a terminal state (DONE or ERROR).
  *
  * Reuses `apiBaseUrl` from `./api` so both modules target the same endpoint.
  */
@@ -62,7 +62,7 @@ const TERMINAL_STATUSES = new Set(["DONE", "ERROR"]);
 
 /**
  * Async generator that polls GET /chat/{requestId} until the status
- * reaches a terminal state (DONE or FAILED).
+ * reaches a terminal state (DONE or ERROR).
  *
  * Yields each `ChatStatusResponse` as it arrives.
  *
