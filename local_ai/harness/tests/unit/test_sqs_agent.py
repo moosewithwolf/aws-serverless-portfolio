@@ -189,8 +189,9 @@ def test_receive_sqs_messages_supports_real_boto3_queue_shape():
     result = _receive_sqs_messages(queue)
 
     queue.receive_messages.assert_called_once_with(
-        MaxNumberOfMessages=1,
-        WaitTimeSeconds=20,
+        MaxNumberOfMessages=5,
+        WaitTimeSeconds=5,
+        VisibilityTimeout=60,
     )
     assert result == {
         "Messages": [
@@ -399,8 +400,9 @@ def test_once_mode_exits_after_one_poll():
         ctx.queue_mock.receive_message.assert_called_once()
         # receive_message was called with correct parameters
         call_kwargs = ctx.queue_mock.receive_message.call_args.kwargs
-        assert call_kwargs["MaxNumberOfMessages"] == 1
-        assert call_kwargs["WaitTimeSeconds"] == 20
+        assert call_kwargs["MaxNumberOfMessages"] == 5
+        assert call_kwargs["WaitTimeSeconds"] == 5
+        assert call_kwargs["VisibilityTimeout"] == 60
     finally:
         ctx.cleanup()
 

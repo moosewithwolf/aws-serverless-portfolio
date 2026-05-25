@@ -127,7 +127,14 @@ fi
 if [[ -f "${PID_FILE}" ]]; then
   echo "Agent is already running with PID $(cat "${PID_FILE}")."
 else
-  nohup "${ROOT_DIR}/.venv/bin/python" -u -m harness.sqs_agent > "${LOG_FILE}" 2>&1 &
+  nohup bash -c '
+    while true; do
+      "'"${ROOT_DIR}"'/.venv/bin/python" -u -m harness.sqs_agent
+      code=$?
+      echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") agent exited with code ${code}; restarting in 5s" >&2
+      sleep 5
+    done
+  ' > "${LOG_FILE}" 2>&1 &
   echo "$!" > "${PID_FILE}"
   sleep 1
   if ! kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
