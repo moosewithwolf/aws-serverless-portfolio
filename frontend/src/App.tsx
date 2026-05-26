@@ -315,16 +315,19 @@ function ResumeView({ profile }: { profile: Profile }) {
           </div>
 
           <div className="resume-section">
-            <h3>Education</h3>
+            <h3>Education / Awards</h3>
             <div className="resume-item">
               <div className="resume-header">
                 <strong>{profile.education.program}</strong>
                 <span className="date">{profile.education.status}</span>
               </div>
               <div className="resume-sub">
-                {profile.education.school} - {profile.education.location}
+                {profile.education.school} - {profile.education.location} | 4.0 GPA
               </div>
-              <p className="highlight-line">4.0 GPA | Marcus Udokang Computer Science Award (2026)</p>
+               <ul className="resume-list">
+                <li>President’s Honour List: Fall 2025, Winter 2025, Summer 2025</li>
+                <li>Marcus Udokang Computer Science Award (2026)</li>
+              </ul>
             </div>
           </div>
 
