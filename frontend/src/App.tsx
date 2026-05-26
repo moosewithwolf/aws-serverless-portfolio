@@ -239,35 +239,67 @@ function ResumeView({ profile }: { profile: Profile }) {
   return (
     <section className="view active">
       <div className="resume-card">
-        <div className="resume-section">
-          <h3>Technical Skills</h3>
-          <div className="skills-tag-group">
-            {profile.skills.map((skill) => (
-              <span className="skill-tag" key={skill}>
-                {skill}
-              </span>
-            ))}
+        <div className="resume-grid">
+          <div className="resume-section">
+            <h3>Skills</h3>
+            <div className="skills-tag-group">
+              {profile.skills.map((skill) => (
+                <span className="skill-tag" key={skill}>
+                  {skill}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="resume-section">
-          <h3>Education & Certifications</h3>
-          <div className="resume-item">
-            <div className="resume-header">
-              <strong>{profile.education.program}</strong>
-              <span className="date">{profile.education.status}</span>
-            </div>
-            <div className="resume-sub">
-              {profile.education.school} - {profile.education.location}
-            </div>
-            <p className="highlight-line">4.0 GPA | Marcus Udokang Computer Science Award (2026)</p>
-          </div>
-          <div className="cert-grid">
-            {profile.certifications.map((certification) => (
-              <div className="skill-tag cert-card" key={certification}>
-                {certification}
+          <div className="resume-section">
+            <h3>Education</h3>
+            <div className="resume-item">
+              <div className="resume-header">
+                <strong>{profile.education.program}</strong>
+                <span className="date">{profile.education.status}</span>
               </div>
-            ))}
+              <div className="resume-sub">
+                {profile.education.school} - {profile.education.location}
+              </div>
+              <p className="highlight-line">4.0 GPA | Marcus Udokang Computer Science Award (2026)</p>
+            </div>
+          </div>
+
+          <div className="resume-section">
+            <h3>Certifications</h3>
+            <div className="cert-grid">
+              {profile.certifications.map((certification) => (
+                <div className="skill-tag cert-card" key={certification}>
+                  {certification}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="resume-section">
+            <h3>Experience</h3>
+            <div className="experience-list">
+              <div className="resume-item">
+                <div className="resume-header">
+                  <strong>Serverless Portfolio</strong>
+                  <span className="date">AWS / React</span>
+                </div>
+                <p>
+                  Built and deployed a portfolio system with S3, CloudFront, Route 53,
+                  API Gateway, Lambda, SQS, DynamoDB, and a local AI agent.
+                </p>
+              </div>
+              <div className="resume-item">
+                <div className="resume-header">
+                  <strong>NoraHangul</strong>
+                  <span className="date">Full-stack</span>
+                </div>
+                <p>
+                  Developed a student management system using Spring Boot, React,
+                  OAuth2/JWT authentication, Docker, and automated deployment.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -314,27 +314,33 @@ main {
 
 .resume-card {
   border-radius: 30px;
-  padding: 60px;
+  padding: 50px;
+}
+
+.resume-grid {
+  display: grid;
+  gap: 30px 44px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .resume-section {
-  margin-bottom: 50px;
-}
-
-.resume-section:last-child {
-  margin-bottom: 0;
+  min-width: 0;
 }
 
 .resume-section h3 {
   font-size: 1.2rem;
-  margin: 0 0 25px;
+  margin: 0 0 20px;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 2px;
 }
 
 .resume-item {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
+}
+
+.resume-item:last-child {
+  margin-bottom: 0;
 }
 
 .resume-header {
@@ -368,6 +374,12 @@ main {
   font-size: 0.9rem;
   color: var(--accent);
   font-weight: 600;
+}
+
+.experience-list p {
+  margin: 8px 0 0;
+  color: var(--secondary);
+  line-height: 1.6;
 }
 
 .skills-tag-group,
@@ -435,6 +447,10 @@ main {
 
   .resume-card {
     padding: 30px;
+  }
+
+  .resume-grid {
+    grid-template-columns: 1fr;
   }
 
   .resume-header {
