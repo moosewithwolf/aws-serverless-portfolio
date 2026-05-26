@@ -207,34 +207,6 @@ main {
   flex-wrap: wrap;
 }
 
-.hero-badges {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 28px;
-}
-
-.hero-cert-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--primary);
-  font-size: 0.82rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.hero-cert-badge img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-}
-
 .btn-primary,
 .btn-secondary {
   padding: 16px 32px;
@@ -320,6 +292,39 @@ main {
   margin: 0 0 10px;
 }
 
+.project-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.project-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--primary);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.project-link-icon {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
 .tag {
   font-size: 0.7rem;
   font-weight: 700;
@@ -403,6 +408,11 @@ main {
   gap: 10px;
 }
 
+.cert-grid {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .skill-tag {
   background: #fff;
   padding: 6px 14px;
@@ -415,32 +425,29 @@ main {
 .cert-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  width: min(100%, 420px);
-  padding: 16px;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
   color: var(--primary);
   text-decoration: none;
 }
 
 .cert-card img {
-  width: 72px;
-  height: 72px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
 }
 
-.cert-card strong,
-.cert-card span {
-  display: block;
+.cert-card-main {
+  min-width: 0;
+  flex: 1;
 }
 
-.cert-card span {
-  margin-top: 4px;
-  color: var(--secondary);
-  font-size: 0.86rem;
-  font-weight: 600;
+.cert-card strong {
+  display: block;
 }
 
 .resume-list {

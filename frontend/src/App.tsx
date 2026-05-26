@@ -23,6 +23,16 @@ const awsCertifications = [
     image: "https://images.credly.com/images/0e284c3f-5164-4b21-8660-0d84737941bc/image.png",
   },
 ];
+const projectLinks: Record<string, { demo: string; github: string }> = {
+  NoraHangul: {
+    demo: "https://github.com/moosewithwolf/Nora_Project#readme",
+    github: "https://github.com/moosewithwolf/Nora_Project",
+  },
+  "Cloud Native Backend": {
+    demo: "https://shinseong.dev",
+    github: "https://github.com/moosewithwolf/aws-serverless-portfolio",
+  },
+};
 
 const fallbackProfile: Profile = {
   name: "Shinseong Kim",
@@ -240,20 +250,6 @@ function HomeView({ profile, openProjects }: { profile: Profile; openProjects: (
             Get in Touch
           </a>
         </div>
-        <div className="hero-badges" aria-label="Credentials">
-          {awsCertifications.map((certification) => (
-            <a
-              className="hero-cert-badge"
-              href={certification.href}
-              key={certification.name}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <img src={certification.image} alt="" />
-              <span>{certification.name}</span>
-            </a>
-          ))}
-        </div>
       </div>
     </section>
   );
@@ -274,6 +270,26 @@ function ProjectsView({ projects }: { projects: Profile["projects"] }) {
               <span className="tag">{project.tag}</span>
               <h3>{project.name === "NoraHangul" ? "Student Management System" : project.name}</h3>
               <p>{project.description}</p>
+              <div className="project-links" aria-label={`${project.name} links`}>
+                <a
+                  href={projectLinks[project.name]?.demo ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${project.name} demo`}
+                >
+                  <span className="project-link-icon">D</span>
+                  Demo
+                </a>
+                <a
+                  href={projectLinks[project.name]?.github ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${project.name} GitHub`}
+                >
+                  <span className="project-link-icon">GH</span>
+                  GitHub
+                </a>
+              </div>
             </div>
           </article>
         ))}
@@ -325,10 +341,10 @@ function ResumeView({ profile }: { profile: Profile }) {
                   aria-label={certification.name}
                 >
                   <img src={certification.image} alt="" />
-                  <div>
+                  <div className="cert-card-main">
                     <strong>{certification.name}</strong>
-                    <span>Issued {certification.issued}</span>
                   </div>
+                  <span className="date">{certification.issued}</span>
                 </a>
               ))}
             </div>
@@ -365,7 +381,7 @@ function ResumeView({ profile }: { profile: Profile }) {
 
             <div className="resume-item">
               <div className="resume-header">
-                <strong>Customs Specialist (Senior Associate)</strong>
+                <strong>Customs Specialist</strong>
                 <span className="date">Aug 2015 - Dec 2018</span>
               </div>
               <div className="resume-sub">ISE Commerce - Seoul, Korea</div>
