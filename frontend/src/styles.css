@@ -318,9 +318,9 @@ main {
 }
 
 .resume-grid {
-  display: grid;
-  gap: 30px 44px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
 }
 
 .resume-section {
@@ -376,8 +376,8 @@ main {
   font-weight: 600;
 }
 
-.experience-list p {
-  margin: 8px 0 0;
+.resume-placeholder {
+  margin: 0;
   color: var(--secondary);
   line-height: 1.6;
 }
@@ -447,10 +447,6 @@ main {
 
   .resume-card {
     padding: 30px;
-  }
-
-  .resume-grid {
-    grid-template-columns: 1fr;
   }
 
   .resume-header {

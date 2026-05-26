@@ -76,6 +76,8 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Education" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Certifications" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Experience" })).toBeInTheDocument();
+    expect(screen.queryByText("Serverless Portfolio")).not.toBeInTheDocument();
+    expect(screen.getByText("Experience details will be added separately.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "AI Chat" }));
     expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();

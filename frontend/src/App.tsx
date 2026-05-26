@@ -278,28 +278,7 @@ function ResumeView({ profile }: { profile: Profile }) {
 
           <div className="resume-section">
             <h3>Experience</h3>
-            <div className="experience-list">
-              <div className="resume-item">
-                <div className="resume-header">
-                  <strong>Serverless Portfolio</strong>
-                  <span className="date">AWS / React</span>
-                </div>
-                <p>
-                  Built and deployed a portfolio system with S3, CloudFront, Route 53,
-                  API Gateway, Lambda, SQS, DynamoDB, and a local AI agent.
-                </p>
-              </div>
-              <div className="resume-item">
-                <div className="resume-header">
-                  <strong>NoraHangul</strong>
-                  <span className="date">Full-stack</span>
-                </div>
-                <p>
-                  Developed a student management system using Spring Boot, React,
-                  OAuth2/JWT authentication, Docker, and automated deployment.
-                </p>
-              </div>
-            </div>
+            <p className="resume-placeholder">Experience details will be added separately.</p>
           </div>
         </div>
       </div>
