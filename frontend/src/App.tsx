@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 
 import { fetchHealth, fetchProfile, type Health, type Profile } from "./api";
+import { ChatConversation, useChatSession } from "./ChatConversation";
 import { GlobalChatWidget } from "./GlobalChatWidget";
 import { loadChatConfig, type ChatConfig } from "./chatConfig";
 import "./styles.css";
 
-type View = "home" | "projects" | "resume" | "ai";
+type View = "home" | "projects" | "resume" | "ai-chat";
+const localModelName = "Gemma 2B IT Q4_K_M";
 
 const fallbackProfile: Profile = {
   name: "Shinseong Kim",
@@ -55,6 +57,7 @@ const fallbackProfile: Profile = {
 
 function App() {
   const [activeView, setActiveView] = useState<View>("home");
+  const [globalChatOpen, setGlobalChatOpen] = useState(false);
   const [profile, setProfile] = useState<Profile>(fallbackProfile);
   const [health, setHealth] = useState<Health | null>(null);
   const [apiState, setApiState] = useState<"loading" | "connected" | "offline">("loading");
@@ -123,10 +126,13 @@ function App() {
           setActiveView={setActiveView}
         />
         <NavButton
-          label="AI Roadmap"
-          view="ai"
+          label="AI Chat"
+          view="ai-chat"
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={(view) => {
+            setActiveView(view);
+            setGlobalChatOpen(false);
+          }}
         />
       </nav>
 
@@ -135,9 +141,13 @@ function App() {
         {activeView === "home" && <HomeView profile={profile} openProjects={() => setActiveView("projects")} />}
         {activeView === "projects" && <ProjectsView projects={profile.projects} />}
         {activeView === "resume" && <ResumeView profile={profile} />}
-        {activeView === "ai" && <AiRoadmapView profile={profile} apiState={apiState} />}
+        {activeView === "ai-chat" && <AiChatView chatConfig={chatConfig} />}
       </main>
-      <GlobalChatWidget chatConfig={chatConfig} />
+      <GlobalChatWidget
+        chatConfig={chatConfig}
+        isOpen={globalChatOpen}
+        onOpenChange={setGlobalChatOpen}
+      />
     </>
   );
 }
@@ -265,31 +275,30 @@ function ResumeView({ profile }: { profile: Profile }) {
   );
 }
 
-function AiRoadmapView({ profile, apiState }: { profile: Profile; apiState: string }) {
+function AiChatView({ chatConfig }: { chatConfig: ChatConfig }) {
+  const session = useChatSession(chatConfig);
+
   return (
     <section className="view active">
-      <div className="resume-card roadmap-card">
-        <div className="section-header">
-          <h2>Local AI Roadmap</h2>
-          <p>{profile.aiRoadmap.description}</p>
+      <div className="ai-chat-page">
+        <div className="ai-chat-page-header">
+          <h2>AI Chat</h2>
+          <span className={`global-chat-status ${chatConfig.enabled ? "online" : "offline"}`}>
+            {chatConfig.enabled ? "Online" : "Offline"}
+          </span>
         </div>
-        <div className="roadmap-grid">
-          <div>
-            <span className="tag">Runtime</span>
-            <h3>{profile.aiRoadmap.runtime}</h3>
-            <p>Small local models will run on the MacBook, with AWS relaying visitor requests in v2.</p>
-          </div>
-          <div>
-            <span className="tag">Status</span>
-            <h3>{profile.aiRoadmap.status}</h3>
-            <p>v1 keeps this as a visible roadmap while the AWS static hosting and API flow are built first.</p>
-          </div>
-          <div>
-            <span className="tag">API</span>
-            <h3>{apiState === "connected" ? "Connected" : "Waiting"}</h3>
-            <p>The React app already calls the serverless API, ready for future chat endpoints.</p>
-          </div>
-        </div>
+        <ChatConversation
+          chatConfig={chatConfig}
+          session={session}
+          className="ai-chat-conversation"
+          emptyOnlineMessage="Ask about Shinseong's projects, skills, or AWS work."
+          modelLabel={
+            chatConfig.enabled
+              ? `${localModelName} is answering from the local Docker model server.`
+              : `${localModelName} will answer when the local agent is online.`
+          }
+          modelStatus={chatConfig.enabled ? "online" : "offline"}
+        />
       </div>
     </section>
   );

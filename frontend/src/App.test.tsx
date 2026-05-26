@@ -63,7 +63,7 @@ describe("App", () => {
     expect(screen.getByText("API connected")).toBeInTheDocument();
   });
 
-  it("switches between Projects, Resume, and AI Roadmap tabs", async () => {
+  it("switches between Projects, Resume, and AI Chat tabs", async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -73,9 +73,23 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Resume" }));
     expect(screen.getByText("Computer Programming and Analysis")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "AI Roadmap" }));
-    expect(screen.getByText("llama.cpp")).toBeInTheDocument();
-    expect(screen.getByText("planned-v2")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
+    expect(screen.getByText("Ask about Shinseong's projects, skills, or AWS work.")).toBeInTheDocument();
+  });
+
+  it("minimizes the floating chat widget when opening the AI Chat tab", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Open AI chat" }));
+    expect(await screen.findByLabelText("Floating AI chat")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+
+    expect(screen.queryByLabelText("Floating AI chat")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open AI chat" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
   });
 
   it("opens the AI Chat tab and sends a message", async () => {
@@ -127,8 +141,10 @@ describe("App", () => {
     const chatMessages = document.querySelector(".chat-messages") as HTMLElement;
     expect(chatMessages!.textContent).toContain("Me:");
     expect(chatMessages!.textContent).toContain("Tell me about your skills");
-    expect(chatMessages!.textContent).toContain("AI:");
-    expect(chatMessages!.textContent).toContain("Hello! How can I help");
+    await waitFor(() => {
+      expect(chatMessages!.textContent).toContain("AI:");
+      expect(chatMessages!.textContent).toContain("Hello! How can I help");
+    });
   });
 
   it("does not call chat APIs when chat config is disabled", async () => {
