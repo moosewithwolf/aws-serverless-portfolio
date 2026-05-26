@@ -18,6 +18,6 @@ services:
     volumes:
       - /Users/shinseong/Desktop/ai-models:/models:ro
     command: >
-      -m /models/Korean-Gemma-2B-Instruct.Q4_K_M.gguf
+      -m /models/gemma-2b-it.Q4_K_M.gguf
       --host 0.0.0.0
       --port 8080
