@@ -29,6 +29,8 @@ describe("GlobalChatWidget", () => {
 
   it("sends a message and renders the assistant response", async () => {
     const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoView;
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
       const target = String(url);
@@ -62,6 +64,7 @@ describe("GlobalChatWidget", () => {
     expect(await screen.findByText(/Tell me about AWS/)).toBeInTheDocument();
     expect(await screen.findByText(/AI:/)).toBeInTheDocument();
     expect(await screen.findByText(/Lambda and SQS/)).toBeInTheDocument();
+    expect(scrollIntoView).toHaveBeenCalled();
   });
 
   it("disables input and avoids API calls when chat is offline", async () => {

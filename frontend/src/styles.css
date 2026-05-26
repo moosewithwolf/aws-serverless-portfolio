@@ -207,14 +207,6 @@ main {
   flex-wrap: wrap;
 }
 
-.hero-badges {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 28px;
-}
-
 .btn-primary,
 .btn-secondary {
   padding: 16px 32px;
@@ -300,6 +292,39 @@ main {
   margin: 0 0 10px;
 }
 
+.project-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.project-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--primary);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.project-link-icon {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
 .tag {
   font-size: 0.7rem;
   font-weight: 700;
@@ -314,27 +339,33 @@ main {
 
 .resume-card {
   border-radius: 30px;
-  padding: 60px;
+  padding: 50px;
+}
+
+.resume-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
 }
 
 .resume-section {
-  margin-bottom: 50px;
-}
-
-.resume-section:last-child {
-  margin-bottom: 0;
+  min-width: 0;
 }
 
 .resume-section h3 {
   font-size: 1.2rem;
-  margin: 0 0 25px;
+  margin: 0 0 20px;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 2px;
 }
 
 .resume-item {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
+}
+
+.resume-item:last-child {
+  margin-bottom: 0;
 }
 
 .resume-header {
@@ -377,6 +408,11 @@ main {
   gap: 10px;
 }
 
+.cert-grid {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .skill-tag {
   background: #fff;
   padding: 6px 14px;
@@ -387,8 +423,42 @@ main {
 }
 
 .cert-card {
-  padding: 15px;
-  border-left: 4px solid #ff9900;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.cert-card img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.cert-card-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.cert-card strong {
+  display: block;
+}
+
+.resume-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--secondary);
+  line-height: 1.7;
+}
+
+.resume-list li + li {
+  margin-top: 6px;
 }
 
 .roadmap-card {
@@ -485,6 +555,7 @@ main {
   line-height: 1.5;
   max-width: 85%;
   word-wrap: break-word;
+  animation: messageRise 0.28s ease-out;
 }
 
 .chat-bubble.user {
@@ -504,6 +575,17 @@ main {
 
 .chat-bubble.assistant.loading {
   opacity: 0.7;
+}
+
+@keyframes messageRise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .typing-indicator::after {
@@ -586,6 +668,32 @@ main {
   cursor: not-allowed;
 }
 
+.chat-model-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.48);
+  color: var(--secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.chat-model-strip::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #35c759;
+  box-shadow: 0 0 0 4px rgba(53, 199, 89, 0.12);
+}
+
+.chat-model-strip.offline::before {
+  background: #b54a36;
+  box-shadow: 0 0 0 4px rgba(181, 74, 54, 0.1);
+}
+
 @media (max-width: 768px) {
   .chat-card {
     padding: 20px;
@@ -602,6 +710,107 @@ main {
 
   .chat-send-btn {
     width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   AI Chat Page Styles
+   --------------------------------------------------------------------------- */
+
+.ai-chat-page {
+  display: flex;
+  height: min(680px, calc(100vh - 190px));
+  min-height: 500px;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.58));
+  box-shadow: 0 24px 70px rgba(80, 98, 130, 0.18);
+  backdrop-filter: saturate(180%) blur(24px);
+  overflow: hidden;
+}
+
+.ai-chat-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 32px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.56);
+}
+
+.ai-chat-page-header h2 {
+  margin: 0;
+  font-size: 3.6rem;
+  letter-spacing: 0;
+}
+
+.ai-chat-conversation {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.ai-chat-conversation .chat-messages {
+  min-height: 0;
+  padding: 28px 32px;
+  gap: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+}
+
+.ai-chat-conversation .chat-empty {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  color: var(--secondary);
+}
+
+.ai-chat-conversation .chat-input-area {
+  align-items: flex-end;
+  padding: 18px 24px 24px;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.ai-chat-conversation .chat-input {
+  min-height: 56px;
+  max-height: 140px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.ai-chat-conversation .chat-send-btn {
+  height: 56px;
+  border-radius: 20px;
+}
+
+@media (max-width: 768px) {
+  .ai-chat-page {
+    height: calc(100vh - 160px);
+    min-height: 460px;
+    border-radius: 24px;
+  }
+
+  .ai-chat-page-header {
+    display: block;
+    padding: 22px 22px 14px;
+  }
+
+  .ai-chat-page-header h2 {
+    font-size: 2.2rem;
+  }
+
+  .ai-chat-conversation .chat-messages {
+    min-height: 0;
+    padding: 20px;
+  }
+
+  .ai-chat-conversation .chat-input-area {
+    padding: 14px 16px 18px;
+  }
+
+  .chat-model-strip {
+    padding: 10px 20px;
   }
 }
 

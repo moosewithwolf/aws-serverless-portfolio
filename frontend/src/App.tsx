@@ -1,11 +1,38 @@
 import { useEffect, useState } from "react";
 
 import { fetchHealth, fetchProfile, type Health, type Profile } from "./api";
+import { ChatConversation, useChatSession } from "./ChatConversation";
 import { GlobalChatWidget } from "./GlobalChatWidget";
 import { loadChatConfig, type ChatConfig } from "./chatConfig";
 import "./styles.css";
 
-type View = "home" | "projects" | "resume" | "ai";
+type View = "home" | "projects" | "resume" | "ai-chat";
+const views: View[] = ["home", "projects", "resume", "ai-chat"];
+const localModelName = "Gemma 2B IT Q4_K_M";
+const awsCertifications = [
+  {
+    name: "AWS Certified Developer Associate",
+    issued: "May 2026",
+    href: "https://www.credly.com/earner/earned/badge/134705ce-abad-4781-aa66-7024675ec676",
+    image: "https://images.credly.com/images/b9feab85-1a43-4f6c-99a5-631b88d5461b/image.png",
+  },
+  {
+    name: "AWS Certified Solutions Architect Associate",
+    issued: "Feb 2026",
+    href: "https://www.credly.com/earner/earned/badge/64c563c4-ad51-47b7-ade7-ba18267549c1",
+    image: "https://images.credly.com/images/0e284c3f-5164-4b21-8660-0d84737941bc/image.png",
+  },
+];
+const projectLinks: Record<string, { demo: string; github: string }> = {
+  NoraHangul: {
+    demo: "https://github.com/moosewithwolf/Nora_Project#readme",
+    github: "https://github.com/moosewithwolf/Nora_Project",
+  },
+  "Cloud Native Backend": {
+    demo: "https://shinseong.dev",
+    github: "https://github.com/moosewithwolf/aws-serverless-portfolio",
+  },
+};
 
 const fallbackProfile: Profile = {
   name: "Shinseong Kim",
@@ -28,12 +55,15 @@ const fallbackProfile: Profile = {
     },
   ],
   skills: [
+    "C/C++",
     "Python",
+    "Java",
+    "Swift",
     "JavaScript",
     "TypeScript",
     "React",
     "Spring Boot",
-    "AWS",
+    "Amazon AWS",
     "Docker",
     "PostgreSQL",
     "MongoDB",
@@ -54,7 +84,8 @@ const fallbackProfile: Profile = {
 };
 
 function App() {
-  const [activeView, setActiveView] = useState<View>("home");
+  const [activeView, setActiveView] = useState<View>(getViewFromHash);
+  const [globalChatOpen, setGlobalChatOpen] = useState(false);
   const [profile, setProfile] = useState<Profile>(fallbackProfile);
   const [health, setHealth] = useState<Health | null>(null);
   const [apiState, setApiState] = useState<"loading" | "connected" | "offline">("loading");
@@ -92,6 +123,15 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleHashChange = () => {
+      setActiveView(getViewFromHash());
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
 
     loadChatConfig().then((config) => {
@@ -109,24 +149,27 @@ function App() {
     <>
       <BackgroundWorld />
       <nav aria-label="Portfolio sections">
-        <NavButton label="Home" view="home" activeView={activeView} setActiveView={setActiveView} />
+        <NavButton label="Home" view="home" activeView={activeView} setActiveView={setActiveViewFromNav} />
         <NavButton
           label="Projects"
           view="projects"
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={setActiveViewFromNav}
         />
         <NavButton
           label="Resume"
           view="resume"
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={setActiveViewFromNav}
         />
         <NavButton
-          label="AI Roadmap"
-          view="ai"
+          label="AI Chat"
+          view="ai-chat"
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={(view) => {
+            setActiveViewFromNav(view);
+            setGlobalChatOpen(false);
+          }}
         />
       </nav>
 
@@ -135,11 +178,28 @@ function App() {
         {activeView === "home" && <HomeView profile={profile} openProjects={() => setActiveView("projects")} />}
         {activeView === "projects" && <ProjectsView projects={profile.projects} />}
         {activeView === "resume" && <ResumeView profile={profile} />}
-        {activeView === "ai" && <AiRoadmapView profile={profile} apiState={apiState} />}
+        {activeView === "ai-chat" && <AiChatView chatConfig={chatConfig} />}
       </main>
-      <GlobalChatWidget chatConfig={chatConfig} />
+      <GlobalChatWidget
+        chatConfig={chatConfig}
+        isOpen={globalChatOpen}
+        onOpenChange={setGlobalChatOpen}
+      />
     </>
   );
+
+  function setActiveViewFromNav(view: View) {
+    setActiveView(view);
+    const nextHash = view === "home" ? "" : `#${view}`;
+    if (window.location.hash !== nextHash) {
+      window.history.pushState(null, "", `${window.location.pathname}${nextHash}`);
+    }
+  }
+}
+
+function getViewFromHash(): View {
+  const hash = window.location.hash.replace("#", "");
+  return views.includes(hash as View) ? (hash as View) : "home";
 }
 
 type NavButtonProps = {
@@ -190,13 +250,6 @@ function HomeView({ profile, openProjects }: { profile: Profile; openProjects: (
             Get in Touch
           </a>
         </div>
-        <div className="hero-badges" aria-label="Credentials">
-          {profile.certifications.map((certification) => (
-            <span className="skill-tag" key={certification}>
-              {certification}
-            </span>
-          ))}
-        </div>
       </div>
     </section>
   );
@@ -217,6 +270,26 @@ function ProjectsView({ projects }: { projects: Profile["projects"] }) {
               <span className="tag">{project.tag}</span>
               <h3>{project.name === "NoraHangul" ? "Student Management System" : project.name}</h3>
               <p>{project.description}</p>
+              <div className="project-links" aria-label={`${project.name} links`}>
+                <a
+                  href={projectLinks[project.name]?.demo ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${project.name} demo`}
+                >
+                  <span className="project-link-icon">D</span>
+                  Demo
+                </a>
+                <a
+                  href={projectLinks[project.name]?.github ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${project.name} GitHub`}
+                >
+                  <span className="project-link-icon">GH</span>
+                  GitHub
+                </a>
+              </div>
             </div>
           </article>
         ))}
@@ -229,35 +302,99 @@ function ResumeView({ profile }: { profile: Profile }) {
   return (
     <section className="view active">
       <div className="resume-card">
-        <div className="resume-section">
-          <h3>Technical Skills</h3>
-          <div className="skills-tag-group">
-            {profile.skills.map((skill) => (
-              <span className="skill-tag" key={skill}>
-                {skill}
-              </span>
-            ))}
+        <div className="resume-grid">
+          <div className="resume-section">
+            <h3>Skills</h3>
+            <div className="skills-tag-group">
+              {profile.skills.map((skill) => (
+                <span className="skill-tag" key={skill}>
+                  {skill}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="resume-section">
-          <h3>Education & Certifications</h3>
-          <div className="resume-item">
-            <div className="resume-header">
-              <strong>{profile.education.program}</strong>
-              <span className="date">{profile.education.status}</span>
-            </div>
-            <div className="resume-sub">
-              {profile.education.school} - {profile.education.location}
-            </div>
-            <p className="highlight-line">4.0 GPA | Marcus Udokang Computer Science Award (2026)</p>
-          </div>
-          <div className="cert-grid">
-            {profile.certifications.map((certification) => (
-              <div className="skill-tag cert-card" key={certification}>
-                {certification}
+          <div className="resume-section">
+            <h3>Education / Awards</h3>
+            <div className="resume-item">
+              <div className="resume-header">
+                <strong>{profile.education.program}</strong>
+                <span className="date">{profile.education.status}</span>
               </div>
-            ))}
+              <div className="resume-sub">
+                {profile.education.school} - {profile.education.location} | 4.0 GPA
+              </div>
+               <ul className="resume-list">
+                <li>President’s Honour List: Fall 2025, Winter 2025, Summer 2025</li>
+                <li>Marcus Udokang Computer Science Award (2026)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="resume-section">
+            <h3>Certifications</h3>
+            <div className="cert-grid">
+              {awsCertifications.map((certification) => (
+                <a
+                  className="cert-card"
+                  href={certification.href}
+                  key={certification.name}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={certification.name}
+                >
+                  <img src={certification.image} alt="" />
+                  <div className="cert-card-main">
+                    <strong>{certification.name}</strong>
+                  </div>
+                  <span className="date">{certification.issued}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="resume-section">
+            <h3>Volunteer Experience</h3>
+            <div className="resume-item">
+              <div className="resume-header">
+                <strong>Executive of CodeXperts</strong>
+                <span className="date">May 2025 - Aug 2025</span>
+              </div>
+              <div className="resume-sub">Official coding club at Seneca Student Federation</div>
+              <ul className="resume-list">
+                <li>Supported club operations and organized group study sessions.</li>
+                <li>Helped peers learn and solve programming problems together.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="resume-section">
+            <h3>Work Experience</h3>
+            <div className="resume-item">
+              <div className="resume-header">
+                <strong>Housekeeping Supervisor</strong>
+                <span className="date">May 2019 - May 2022</span>
+              </div>
+              <div className="resume-sub">Rundle Mountain Lodge - Canmore, AB</div>
+              <ul className="resume-list">
+                <li>Team Leadership: Led staff, assigned tasks, and supported team communication.</li>
+                <li>Conflict Resolution: Resolved guest issues and communicated between staff and management.</li>
+              </ul>
+            </div>
+
+            <div className="resume-item">
+              <div className="resume-header">
+                <strong>Customs Specialist</strong>
+                <span className="date">Aug 2015 - Dec 2018</span>
+              </div>
+              <div className="resume-sub">ISE Commerce - Seoul, Korea</div>
+              <ul className="resume-list">
+                <li>Import/Export Operations: 3+ years of experience in customs clearance and bonded area management.</li>
+                <li>Large-Scale Data Handling: Managed 3M+ annual import cases with 100% compliance and high data accuracy.</li>
+                <li>Workflow Optimization: Launched a new export business line and optimized logistics processes for e-commerce.</li>
+                <li>Professional Licensure: Certified Bonded Goods Caretaker and Certified Professional Logistician (licensed in Korea).</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -265,31 +402,30 @@ function ResumeView({ profile }: { profile: Profile }) {
   );
 }
 
-function AiRoadmapView({ profile, apiState }: { profile: Profile; apiState: string }) {
+function AiChatView({ chatConfig }: { chatConfig: ChatConfig }) {
+  const session = useChatSession(chatConfig);
+
   return (
     <section className="view active">
-      <div className="resume-card roadmap-card">
-        <div className="section-header">
-          <h2>Local AI Roadmap</h2>
-          <p>{profile.aiRoadmap.description}</p>
+      <div className="ai-chat-page">
+        <div className="ai-chat-page-header">
+          <h2>AI Chat</h2>
+          <span className={`global-chat-status ${chatConfig.enabled ? "online" : "offline"}`}>
+            {chatConfig.enabled ? "Online" : "Offline"}
+          </span>
         </div>
-        <div className="roadmap-grid">
-          <div>
-            <span className="tag">Runtime</span>
-            <h3>{profile.aiRoadmap.runtime}</h3>
-            <p>Small local models will run on the MacBook, with AWS relaying visitor requests in v2.</p>
-          </div>
-          <div>
-            <span className="tag">Status</span>
-            <h3>{profile.aiRoadmap.status}</h3>
-            <p>v1 keeps this as a visible roadmap while the AWS static hosting and API flow are built first.</p>
-          </div>
-          <div>
-            <span className="tag">API</span>
-            <h3>{apiState === "connected" ? "Connected" : "Waiting"}</h3>
-            <p>The React app already calls the serverless API, ready for future chat endpoints.</p>
-          </div>
-        </div>
+        <ChatConversation
+          chatConfig={chatConfig}
+          session={session}
+          className="ai-chat-conversation"
+          emptyOnlineMessage="Ask about Shinseong's projects, skills, or AWS work."
+          modelLabel={
+            chatConfig.enabled
+              ? `${localModelName} is answering from the local Docker model server.`
+              : `${localModelName} will answer when the local agent is online.`
+          }
+          modelStatus={chatConfig.enabled ? "online" : "offline"}
+        />
       </div>
     </section>
   );

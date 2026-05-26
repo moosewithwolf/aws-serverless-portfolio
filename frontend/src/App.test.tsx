@@ -38,6 +38,7 @@ const profile = {
 
 describe("App", () => {
   beforeEach(() => {
+    window.history.replaceState(null, "", "/");
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
@@ -59,23 +60,69 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByRole("heading", { name: "Shinseong Kim." })).toBeInTheDocument();
-    expect(await screen.findByText("AWS Solutions Architect Associate")).toBeInTheDocument();
-    expect(screen.getByText("API connected")).toBeInTheDocument();
+    expect(await screen.findByText("API connected")).toBeInTheDocument();
+    expect(screen.queryByText("AWS Certified Solutions Architect Associate")).not.toBeInTheDocument();
   });
 
-  it("switches between Projects, Resume, and AI Roadmap tabs", async () => {
+  it("switches between Projects, Resume, and AI Chat tabs", async () => {
     const user = userEvent.setup();
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: "Projects" }));
     expect(await screen.findByText("NoraHangul")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "NoraHangul demo" })).toHaveAttribute(
+      "href",
+      "https://github.com/moosewithwolf/Nora_Project#readme",
+    );
+    expect(screen.getByRole("link", { name: "NoraHangul GitHub" })).toHaveAttribute(
+      "href",
+      "https://github.com/moosewithwolf/Nora_Project",
+    );
+    expect(window.location.hash).toBe("#projects");
 
     await user.click(screen.getByRole("button", { name: "Resume" }));
     expect(screen.getByText("Computer Programming and Analysis")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Education" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Certifications" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Volunteer Experience" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Work Experience" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "AWS Certified Developer Associate" })).toHaveAttribute(
+      "href",
+      "https://www.credly.com/earner/earned/badge/134705ce-abad-4781-aa66-7024675ec676",
+    );
+    expect(screen.getByText("May 2026")).toBeInTheDocument();
+    expect(screen.getByText("Executive of CodeXperts")).toBeInTheDocument();
+    expect(screen.getByText("Housekeeping Supervisor")).toBeInTheDocument();
+    expect(screen.getByText("Customs Specialist")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "AI Roadmap" }));
-    expect(screen.getByText("llama.cpp")).toBeInTheDocument();
-    expect(screen.getByText("planned-v2")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
+    expect(screen.getByText("Ask about Shinseong's projects, skills, or AWS work.")).toBeInTheDocument();
+    expect(window.location.hash).toBe("#ai-chat");
+  });
+
+  it("opens the view from the current URL hash", async () => {
+    window.history.replaceState(null, "", "/#resume");
+
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume" })).toHaveClass("active");
+  });
+
+  it("minimizes the floating chat widget when opening the AI Chat tab", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Open AI chat" }));
+    expect(await screen.findByLabelText("Floating AI chat")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+
+    expect(screen.queryByLabelText("Floating AI chat")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open AI chat" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
   });
 
   it("opens the AI Chat tab and sends a message", async () => {
@@ -127,8 +174,10 @@ describe("App", () => {
     const chatMessages = document.querySelector(".chat-messages") as HTMLElement;
     expect(chatMessages!.textContent).toContain("Me:");
     expect(chatMessages!.textContent).toContain("Tell me about your skills");
-    expect(chatMessages!.textContent).toContain("AI:");
-    expect(chatMessages!.textContent).toContain("Hello! How can I help");
+    await waitFor(() => {
+      expect(chatMessages!.textContent).toContain("AI:");
+      expect(chatMessages!.textContent).toContain("Hello! How can I help");
+    });
   });
 
   it("does not call chat APIs when chat config is disabled", async () => {
