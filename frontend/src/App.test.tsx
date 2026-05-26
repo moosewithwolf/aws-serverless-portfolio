@@ -83,7 +83,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Resume" }));
     expect(screen.getByText("Computer Programming and Analysis")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Education" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Education / Awards" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Certifications" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Volunteer Experience" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Work Experience" })).toBeInTheDocument();
