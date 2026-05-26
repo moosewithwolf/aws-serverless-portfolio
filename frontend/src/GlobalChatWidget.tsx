@@ -85,7 +85,12 @@ export function GlobalChatWidget({ chatConfig }: { chatConfig: ChatConfig }) {
   return (
     <aside className="global-chat-panel" aria-label="AI chat">
       <div className="global-chat-header">
-        <h2>AI Chat</h2>
+        <div>
+          <h2>AI Chat</h2>
+          <span className={`global-chat-status ${chatConfig.enabled ? "online" : "offline"}`}>
+            {chatConfig.enabled ? "Online" : "Offline"}
+          </span>
+        </div>
         <button
           aria-label="Minimize AI chat"
           type="button"
