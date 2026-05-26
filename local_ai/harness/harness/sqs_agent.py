@@ -17,6 +17,7 @@ import argparse
 import json
 import logging
 import time
+import signal
 from typing import Optional
 
 # ---------------------------------------------------------------------------
@@ -36,11 +37,14 @@ from harness.contracts import ChatStatus
 # Configuration
 # ---------------------------------------------------------------------------
 
-SQS_POLL_WAIT: int = 20          # long-poll seconds
-SQS_BATCH_SIZE: int = 1
+SQS_POLL_WAIT: int = 5           # long-poll seconds
+SQS_VISIBILITY_TIMEOUT: int = 60 # seconds before failed work becomes visible again
+SQS_BATCH_SIZE: int = 5
 POLL_INTERVAL: int = 2           # seconds between poll cycles in loop mode
+MESSAGE_TIMEOUT: int = 45        # hard cap for one model job
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 # ---------------------------------------------------------------------------
@@ -60,11 +64,11 @@ def _now_epoch() -> int:
 
 
 def _sqs_resource():
-    return boto3.resource("sqs")
+    return boto3.resource("sqs", region_name=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION"))
 
 
 def _ddb_resource():
-    return boto3.resource("dynamodb")
+    return boto3.resource("dynamodb", region_name=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION"))
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +113,8 @@ def _handle_message(body: str, table_name: str) -> bool:
             return False
         return True
 
+    logger.info("Processing chat request requestId=%s", request_id)
+
     # Process through model gateway
     result = process_message(message, request_id=request_id)
     status = result.get("status", ChatStatus.ERROR.value)
@@ -126,8 +132,44 @@ def _handle_message(body: str, table_name: str) -> bool:
         )
         return False
 
+    logger.info("Completed chat request requestId=%s status=%s", request_id, status)
+
     # DynamoDB succeeded — return True so poll_once deletes with actual ReceiptHandle
     return True
+
+
+def _request_id_from_body(body: str) -> Optional[str]:
+    """Best-effort requestId extraction for timeout/error handling."""
+    try:
+        data = json.loads(body)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    request_id = data.get("requestId")
+    return request_id if isinstance(request_id, str) and request_id else None
+
+
+def _handle_message_with_timeout(body: str, table_name: str) -> bool:
+    """Process one message with a hard timeout so one job cannot stall the agent."""
+    def _raise_timeout(_signum, _frame):
+        raise TimeoutError("Chat message processing timed out.")
+
+    previous_handler = signal.signal(signal.SIGALRM, _raise_timeout)
+    signal.alarm(MESSAGE_TIMEOUT)
+    try:
+        return _handle_message(body, table_name)
+    except TimeoutError as exc:
+        request_id = _request_id_from_body(body)
+        logger.error("Message processing timed out requestId=%s: %s", request_id, exc)
+        if request_id:
+            return _update_dynamodb_error(
+                table_name,
+                request_id,
+                "The local model timed out. Please try again.",
+            )
+        return False
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
 
 def _update_dynamodb(
@@ -192,11 +234,45 @@ def _delete_sqs_message(queue_url: str, receipt_handle: str) -> bool:
     try:
         sqs = _sqs_resource()
         queue = sqs.Queue(queue_url)
-        queue.delete_message(ReceiptHandle=receipt_handle)
+        delete_message = getattr(queue, "delete_message", None)
+        if callable(delete_message):
+            delete_message(ReceiptHandle=receipt_handle)
+        else:
+            queue.meta.client.delete_message(
+                QueueUrl=queue_url,
+                ReceiptHandle=receipt_handle,
+            )
+        logger.info("Deleted SQS message.")
         return True
     except Exception as exc:
         logger.error("SQS delete error: %s", exc)
         return False
+
+
+def _receive_sqs_messages(queue) -> dict:
+    """Receive SQS messages from either a real boto3 Queue or a test double."""
+    receive_message = getattr(queue, "receive_message", None)
+    if callable(receive_message):
+        return receive_message(
+            MaxNumberOfMessages=SQS_BATCH_SIZE,
+            WaitTimeSeconds=SQS_POLL_WAIT,
+            VisibilityTimeout=SQS_VISIBILITY_TIMEOUT,
+        )
+
+    messages = queue.receive_messages(
+        MaxNumberOfMessages=SQS_BATCH_SIZE,
+        WaitTimeSeconds=SQS_POLL_WAIT,
+        VisibilityTimeout=SQS_VISIBILITY_TIMEOUT,
+    )
+    return {
+        "Messages": [
+            {
+                "Body": message.body,
+                "ReceiptHandle": message.receipt_handle,
+            }
+            for message in messages
+        ]
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -212,10 +288,8 @@ def poll_once(table_name: str, queue_url: str) -> None:
         logger.error("Failed to get SQS queue: %s", exc)
         return
 
-    messages = queue.receive_message(
-        MaxNumberOfMessages=SQS_BATCH_SIZE,
-        WaitTimeSeconds=SQS_POLL_WAIT,
-    )
+    messages = _receive_sqs_messages(queue)
+    logger.info("Received %s SQS message(s).", len(messages.get("Messages", [])))
 
     for msg in messages.get("Messages", []):
         body = msg.get("Body", "")
@@ -224,7 +298,7 @@ def poll_once(table_name: str, queue_url: str) -> None:
             continue
 
         try:
-            success = _handle_message(body, table_name)
+            success = _handle_message_with_timeout(body, table_name)
         except Exception as exc:
             logger.error("Unhandled error processing message: %s", exc)
             success = False

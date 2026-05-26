@@ -48,7 +48,7 @@ CONTAINER_MODEL_ENDPOINT: str = os.environ.get(
     "http://127.0.0.1:8080/v1/chat/completions",
 )
 
-_MODEL_TIMEOUT: float = 30.0  # seconds — fail fast
+_MODEL_TIMEOUT: float = 15.0  # seconds — fail fast
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +61,7 @@ def _build_payload(user_message: str) -> dict[str, Any]:
     return {
         "model": "local-model",
         "messages": [{"role": "user", "content": user_message}],
-        "max_tokens": 1024,
+        "max_tokens": 256,
         "temperature": 0.7,
     }
 
