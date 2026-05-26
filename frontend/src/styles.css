@@ -215,6 +215,26 @@ main {
   margin-top: 28px;
 }
 
+.hero-cert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hero-cert-badge img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
 .btn-primary,
 .btn-secondary {
   padding: 16px 32px;
@@ -376,12 +396,6 @@ main {
   font-weight: 600;
 }
 
-.resume-placeholder {
-  margin: 0;
-  color: var(--secondary);
-  line-height: 1.6;
-}
-
 .skills-tag-group,
 .cert-grid {
   display: flex;
@@ -399,8 +413,45 @@ main {
 }
 
 .cert-card {
-  padding: 15px;
-  border-left: 4px solid #ff9900;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(100%, 420px);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.cert-card img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.cert-card strong,
+.cert-card span {
+  display: block;
+}
+
+.cert-card span {
+  margin-top: 4px;
+  color: var(--secondary);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.resume-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--secondary);
+  line-height: 1.7;
+}
+
+.resume-list li + li {
+  margin-top: 6px;
 }
 
 .roadmap-card {

@@ -59,7 +59,7 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByRole("heading", { name: "Shinseong Kim." })).toBeInTheDocument();
-    expect(await screen.findByText("AWS Solutions Architect Associate")).toBeInTheDocument();
+    expect(await screen.findByText("AWS Certified Solutions Architect Associate")).toBeInTheDocument();
     expect(screen.getByText("API connected")).toBeInTheDocument();
   });
 
@@ -75,9 +75,16 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Education" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Certifications" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Experience" })).toBeInTheDocument();
-    expect(screen.queryByText("Serverless Portfolio")).not.toBeInTheDocument();
-    expect(screen.getByText("Experience details will be added separately.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Volunteer Experience" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Work Experience" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "AWS Certified Developer Associate" })).toHaveAttribute(
+      "href",
+      "https://www.credly.com/earner/earned/badge/134705ce-abad-4781-aa66-7024675ec676",
+    );
+    expect(screen.getByText("Issued May 2026")).toBeInTheDocument();
+    expect(screen.getByText("Executive of CodeXperts")).toBeInTheDocument();
+    expect(screen.getByText("Housekeeping Supervisor")).toBeInTheDocument();
+    expect(screen.getByText("Customs Specialist (Senior Associate)")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "AI Chat" }));
     expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
