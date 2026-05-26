@@ -38,6 +38,7 @@ const profile = {
 
 describe("App", () => {
   beforeEach(() => {
+    window.history.replaceState(null, "", "/");
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
@@ -69,6 +70,7 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Projects" }));
     expect(await screen.findByText("NoraHangul")).toBeInTheDocument();
+    expect(window.location.hash).toBe("#projects");
 
     await user.click(screen.getByRole("button", { name: "Resume" }));
     expect(screen.getByText("Computer Programming and Analysis")).toBeInTheDocument();
@@ -89,6 +91,16 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "AI Chat" }));
     expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
     expect(screen.getByText("Ask about Shinseong's projects, skills, or AWS work.")).toBeInTheDocument();
+    expect(window.location.hash).toBe("#ai-chat");
+  });
+
+  it("opens the view from the current URL hash", async () => {
+    window.history.replaceState(null, "", "/#resume");
+
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume" })).toHaveClass("active");
   });
 
   it("minimizes the floating chat widget when opening the AI Chat tab", async () => {

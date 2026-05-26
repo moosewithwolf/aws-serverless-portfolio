@@ -7,6 +7,7 @@ import { loadChatConfig, type ChatConfig } from "./chatConfig";
 import "./styles.css";
 
 type View = "home" | "projects" | "resume" | "ai-chat";
+const views: View[] = ["home", "projects", "resume", "ai-chat"];
 const localModelName = "Gemma 2B IT Q4_K_M";
 const awsCertifications = [
   {
@@ -73,7 +74,7 @@ const fallbackProfile: Profile = {
 };
 
 function App() {
-  const [activeView, setActiveView] = useState<View>("home");
+  const [activeView, setActiveView] = useState<View>(getViewFromHash);
   const [globalChatOpen, setGlobalChatOpen] = useState(false);
   const [profile, setProfile] = useState<Profile>(fallbackProfile);
   const [health, setHealth] = useState<Health | null>(null);
@@ -112,6 +113,15 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleHashChange = () => {
+      setActiveView(getViewFromHash());
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
 
     loadChatConfig().then((config) => {
@@ -129,25 +139,25 @@ function App() {
     <>
       <BackgroundWorld />
       <nav aria-label="Portfolio sections">
-        <NavButton label="Home" view="home" activeView={activeView} setActiveView={setActiveView} />
+        <NavButton label="Home" view="home" activeView={activeView} setActiveView={setActiveViewFromNav} />
         <NavButton
           label="Projects"
           view="projects"
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={setActiveViewFromNav}
         />
         <NavButton
           label="Resume"
           view="resume"
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={setActiveViewFromNav}
         />
         <NavButton
           label="AI Chat"
           view="ai-chat"
           activeView={activeView}
           setActiveView={(view) => {
-            setActiveView(view);
+            setActiveViewFromNav(view);
             setGlobalChatOpen(false);
           }}
         />
@@ -167,6 +177,19 @@ function App() {
       />
     </>
   );
+
+  function setActiveViewFromNav(view: View) {
+    setActiveView(view);
+    const nextHash = view === "home" ? "" : `#${view}`;
+    if (window.location.hash !== nextHash) {
+      window.history.pushState(null, "", `${window.location.pathname}${nextHash}`);
+    }
+  }
+}
+
+function getViewFromHash(): View {
+  const hash = window.location.hash.replace("#", "");
+  return views.includes(hash as View) ? (hash as View) : "home";
 }
 
 type NavButtonProps = {
