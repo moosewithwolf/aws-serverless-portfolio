@@ -19,9 +19,9 @@ confirm_changeset = true
 resolve_s3 = true
 stack_name = "aws-serverless-portfolio-api"
 s3_prefix = "aws-serverless-portfolio-api"
-region = "ca-central-1"
 profile = "portfolio"
 image_repositories = []
+disable_rollback = true
 
 [default.package.parameters]
 resolve_s3 = true
