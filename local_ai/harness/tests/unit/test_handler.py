@@ -359,6 +359,41 @@ def test_chat_post_does_not_call_model_backend():
     assert set(after) == set(model_modules), "Model backend was called during POST /chat"
 
 
+def test_chat_post_sqs_fails_after_dynamodb_put_captures_request_id_and_marks_error():
+    """When SQS send_message raises AFTER DynamoDB put_item succeeds, the handler must:
+    - return 503 with safe error message and sanitized=false
+    - call update_item once to mark the same requestId ERROR so the pending record
+      is not left in an indeterminate state.
+    """
+    with MockAws(sqs_exception=Exception("SQS network error")) as (mock_table, mock_queue):
+        response = invoke(
+            "/chat",
+            method="POST",
+            body=json.dumps({"message": "Test message for SQS failure"}),
+        )
+
+    assert response["statusCode"] == 503
+    payload = body(response)
+    assert payload["status"] == "ERROR"
+    assert payload["message"] == "Service unavailable. Please try again later."
+    assert payload.get("sanitized") is False
+
+    # DynamoDB put_item was called (PENDING was stored)
+    mock_table.put_item.assert_called_once()
+
+    # The handler should have updated the same requestId to ERROR
+    put_call = mock_table.put_item.call_args
+    captured_request_id = put_call.kwargs["Item"]["requestId"]
+    mock_table.update_item.assert_called_once()
+    update_call = mock_table.update_item.call_args
+    assert update_call.kwargs["Key"]["requestId"] == captured_request_id
+    assert update_call.kwargs["UpdateExpression"] is not None
+    # Verify the status was set to ERROR
+    update_attrs = update_call.kwargs["ExpressionAttributeValues"]
+    assert update_attrs[":st"] == "ERROR"
+    assert update_attrs[":san"] is False
+
+
 # ---------------------------------------------------------------------------
 # GET /chat/<requestId> tests
 # ---------------------------------------------------------------------------
@@ -664,14 +699,16 @@ def test_template_has_required_resources():
 
     # Verify DynamoDB table attributes
     ddb = resources["ChatRequestTable"]["Properties"]
-    assert ddb["TableName"] == "chat-requests"
+    assert isinstance(ddb["TableName"], _FnSub)
+    assert "chat-requests" in ddb["TableName"].value
     key = ddb["KeySchema"][0]
     assert key["AttributeName"] == "requestId"
     assert key["KeyType"] == "HASH"
 
     # Verify SQS queue exists with expected properties
     sqs = resources["ChatQueue"]["Properties"]
-    assert sqs["QueueName"] == "chat-jobs"
+    assert isinstance(sqs["QueueName"], _FnSub)
+    assert "chat-jobs" in sqs["QueueName"].value
     assert sqs["VisibilityTimeout"] == 300
 
 
@@ -793,9 +830,10 @@ def test_template_local_ai_function_env_and_policies():
     The IAM policy must be scoped to only the required actions:
     - dynamodb:GetItem
     - dynamodb:PutItem
+    - dynamodb:UpdateItem
     - sqs:SendMessage
 
-    Broader actions (DeleteItem, UpdateItem, Query, Scan) must NOT be present.
+    Broader actions (DeleteItem, Query, Scan) must NOT be present.
     """
     template = _load_template()
 
@@ -822,11 +860,98 @@ def test_template_local_ai_function_env_and_policies():
             all_actions.extend(actions)
 
     # Allowed actions — must all be present
-    required_actions = ["dynamodb:GetItem", "dynamodb:PutItem", "sqs:SendMessage"]
+    required_actions = [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "sqs:SendMessage",
+    ]
     for action in required_actions:
         assert action in all_actions, f"Required action '{action}' missing from LocalAiFunction IAM policy"
 
     # Forbidden actions — must NOT be present
-    forbidden_actions = ["dynamodb:DeleteItem", "dynamodb:UpdateItem", "dynamodb:Query", "dynamodb:Scan"]
+    forbidden_actions = ["dynamodb:DeleteItem", "dynamodb:Query", "dynamodb:Scan"]
     for action in forbidden_actions:
         assert action not in all_actions, f"Forbidden action '{action}' should NOT be in LocalAiFunction IAM policy"
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 — Dead-letter queue and queue safety assertions
+# ---------------------------------------------------------------------------
+
+
+def test_template_chat_queue_has_redrive_policy():
+    """ChatQueue must define a RedrivePolicy pointing to a DLQ."""
+    template = _load_template()
+    sqs = template["Resources"]["ChatQueue"]["Properties"]
+    assert "RedrivePolicy" in sqs, (
+        "ChatQueue must have a RedrivePolicy so failed messages land in a DLQ"
+    )
+    dlq_arn = sqs["RedrivePolicy"]["deadLetterTargetArn"]
+    assert isinstance(dlq_arn, (_FnGetAtt, _FnSub, str)), (
+        "RedrivePolicy.deadLetterTargetArn must point to the DLQ ARN"
+    )
+
+
+def test_template_dlq_resource_exists():
+    """A dedicated DLQ resource (AWS::SQS::Queue) must exist in the template."""
+    template = _load_template()
+    resources = template["Resources"]
+    dlq_found = False
+    for name, resource in resources.items():
+        if name == "ChatQueue":
+            continue
+        lower_name = name.lower()
+        if resource.get("Type") == "AWS::SQS::Queue" and (
+            "dlq" in lower_name or "deadletter" in lower_name
+        ):
+            dlq_found = True
+            break
+    assert dlq_found, (
+        "Must define an AWS::SQS::Queue resource that serves as the DLQ"
+    )
+
+
+def test_template_retention_period_not_exceed_ttl():
+    """ChatQueue MessageRetentionPeriod must be <= CHAT_TTL_SECONDS from LocalAiFunction env.
+
+    If SQS retains messages longer than the DynamoDB TTL, orphaned SQS messages
+    can outlive their DynamoDB records, confusing the poller and wasting resources.
+    """
+    template = _load_template()
+    sqs = template["Resources"]["ChatQueue"]["Properties"]
+    retention = sqs.get("MessageRetentionPeriod", 0)
+    func = template["Resources"]["LocalAiFunction"]["Properties"]
+    ttl = int(func["Environment"]["Variables"]["CHAT_TTL_SECONDS"])
+    assert int(retention) <= ttl, (
+        f"MessageRetentionPeriod ({retention}) must be <= CHAT_TTL_SECONDS ({ttl})"
+    )
+
+
+def test_template_chat_request_table_name_is_not_literal():
+    """ChatRequestTable TableName must use a reference or intrinsic, not the literal 'chat-requests'.
+
+    Hard-coding the table name means the table name is fixed at template-edit time
+    and cannot be customised per deploy target (dev / staging / prod).
+    """
+    template = _load_template()
+    ddb = template["Resources"]["ChatRequestTable"]["Properties"]
+    table_name = ddb["TableName"]
+    assert table_name != "chat-requests", (
+        "TableName should not be the hardcoded literal 'chat-requests'; use a parameter "
+        "or !Sub so it can vary per environment"
+    )
+
+
+def test_template_chat_queue_name_is_not_literal():
+    """ChatQueue QueueName must use a reference or intrinsic, not the literal 'chat-jobs'.
+
+    Hard-coding the queue name prevents per-environment queue name variation.
+    """
+    template = _load_template()
+    sqs = template["Resources"]["ChatQueue"]["Properties"]
+    queue_name = sqs["QueueName"]
+    assert queue_name != "chat-jobs", (
+        "QueueName should not be the hardcoded literal 'chat-jobs'; use a parameter "
+        "or !Sub so it can vary per environment"
+    )

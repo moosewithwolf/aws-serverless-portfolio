@@ -363,7 +363,7 @@ Expected: all local AI unit tests pass.
 - Modify: `local_ai/harness/tests/unit/test_sqs_agent.py`
 - Modify/Create: infrastructure template tests.
 
-- [ ] **Step 1: Assign failing infrastructure tests**
+- [x] **Step 1: Assign failing infrastructure tests**
 
 Prompt:
 
@@ -389,7 +389,7 @@ Expected result: tests fail.
 Stop and report changed files and failing assertions.
 ```
 
-- [ ] **Step 2: Assign SAM template update**
+- [x] **Step 2: Assign SAM template update**
 
 Prompt:
 
@@ -415,7 +415,7 @@ Expected result: pass.
 Stop and report changed files and test result.
 ```
 
-- [ ] **Step 3: Assign POST compensation tests**
+- [x] **Step 3: Assign POST compensation tests**
 
 Prompt:
 
@@ -442,7 +442,7 @@ Expected result: new test fails.
 Stop and report changed files and failing test.
 ```
 
-- [ ] **Step 4: Assign POST compensation implementation**
+- [x] **Step 4: Assign POST compensation implementation**
 
 Prompt:
 
@@ -468,7 +468,7 @@ Expected result: pass.
 Stop and report changed files and test result.
 ```
 
-- [ ] **Step 5: Codex verifies backend**
+- [x] **Step 5: Codex verifies backend**
 
 Run:
 
@@ -865,8 +865,8 @@ Codex must never ask Hermes to solve multiple tasks at once.
 - [x] Hermes did not stage, commit, push, or create PRs.
 - [x] Codex created commits only after reviewing diffs and running tests.
 - [ ] Fresh Hermes sessions were used at domain boundaries or when context became stale/heavy.
-- [ ] `backend/template.yaml` defines DLQ/RedrivePolicy in repo, not only in AWS console.
-- [ ] SQS retention and DynamoDB TTL no longer conflict silently.
+- [x] `backend/template.yaml` defines DLQ/RedrivePolicy in repo, not only in AWS console.
+- [x] SQS retention and DynamoDB TTL no longer conflict silently.
 - [x] `DONE` chat status preserves stored `sanitized`.
 - [x] Malformed request IDs are rejected before DynamoDB lookup.
 - [ ] Frontend hash navigation and Back/Forward behavior are tested.

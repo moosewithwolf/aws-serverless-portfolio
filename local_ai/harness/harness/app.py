@@ -174,6 +174,7 @@ def _handle_chat_post(event: dict[str, Any]) -> dict[str, Any]:
     # Send SQS message
     sqs_ok = _send_chat_job(request_id, request.message)
     if not sqs_ok:
+        _store_error_status(request_id, "Service unavailable. Please try again later.")
         return _response(
             503, {
                 "status": "ERROR",
@@ -215,6 +216,40 @@ def _store_pending_request(request_id: str, message: str) -> bool:
         return True
     except Exception:
         return False
+
+
+def _store_error_status(request_id: str, error_message: str) -> None:
+    """Update an existing PENDING item to ERROR status.
+
+    Called when SQS delivery fails after DynamoDB put_item succeeded,
+    so the pending record is not left indeterminate.
+    """
+    table_name = _chat_table_name()
+    if not table_name:
+        return
+    try:
+        ddb = _ddb_resource()
+        table = ddb.Table(table_name)
+        table.update_item(
+            Key={"requestId": request_id},
+            UpdateExpression="SET #st = :st, #msg = :msg, #san = :san, #ut = :ut",
+            ExpressionAttributeNames={
+                "#st": "status",
+                "#msg": "message",
+                "#san": "sanitized",
+                "#ut": "updatedAt",
+            },
+            ExpressionAttributeValues={
+                ":st": ChatStatus.ERROR.value,
+                ":msg": error_message,
+                ":san": False,
+                ":ut": _now_epoch(),
+            },
+            ConditionExpression="attribute_exists(requestId)",
+        )
+    except Exception:
+        # Non-fatal: the 503 already indicates failure; best-effort update.
+        pass
 
 
 def _send_chat_job(request_id: str, message: str) -> bool:

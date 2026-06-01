@@ -39,7 +39,7 @@ Resources:
   ChatRequestTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: chat-requests
+      TableName: !Sub "${AWS::StackName}-chat-requests"
       AttributeDefinitions:
         - AttributeName: requestId
           AttributeType: S
@@ -51,12 +51,21 @@ Resources:
         AttributeName: ttl
         Enabled: true
 
+  ChatDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${AWS::StackName}-chat-jobs-dlq"
+      MessageRetentionPeriod: 3600
+
   ChatQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: chat-jobs
+      QueueName: !Sub "${AWS::StackName}-chat-jobs"
       VisibilityTimeout: 300
-      MessageRetentionPeriod: 1209600
+      MessageRetentionPeriod: 3600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ChatDeadLetterQueue.Arn
+        maxReceiveCount: 3
 
   LocalAiFunction:
     Type: AWS::Serverless::Function
@@ -79,6 +88,7 @@ Resources:
               Action:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
+                - dynamodb:UpdateItem
               Resource: !GetAtt ChatRequestTable.Arn
             - Effect: Allow
               Action:
