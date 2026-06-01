@@ -879,4 +879,4 @@ Codex must never ask Hermes to solve multiple tasks at once.
 - [x] Local AI harness tests pass.
 - [x] Backend unit tests pass.
 - [x] `git diff --check` passes.
-- [ ] Codex pushed the verified branch and opened the PR, if requested for execution.
+- [x] Codex pushed the verified branch and opened the PR, if requested for execution.
