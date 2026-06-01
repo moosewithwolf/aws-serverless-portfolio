@@ -1,4 +1,4 @@
-import type { Profile } from "./api";
+import type { Profile } from "../api/portfolioApi";
 
 export const localModelName = "Gemma 2B IT Q4_K_M";
 

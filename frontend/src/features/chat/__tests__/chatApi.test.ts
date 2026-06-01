@@ -10,7 +10,7 @@
 
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
-import { PollTimeoutError, pollChat, postChat } from "./chatApi";
+import { PollTimeoutError, pollChat, postChat } from "../chatApi";
 
 // ---------------------------------------------------------------------------
 // Helpers

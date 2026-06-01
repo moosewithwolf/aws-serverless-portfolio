@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, afterEach } from "vitest";
 
-import { GlobalChatWidget } from "./GlobalChatWidget";
+import { GlobalChatWidget } from "../GlobalChatWidget";
 
 describe("GlobalChatWidget", () => {
   afterEach(() => {

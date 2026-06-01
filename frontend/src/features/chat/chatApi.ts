@@ -9,7 +9,7 @@
  * Reuses `apiBaseUrl` from `./api` so both modules target the same endpoint.
  */
 
-import { apiBaseUrl } from "./api";
+import { apiBaseUrl } from "../../shared/api/portfolioApi";
 
 // ---------------------------------------------------------------------------
 // Types (mirror local_ai/harness/harness/contracts.py)
