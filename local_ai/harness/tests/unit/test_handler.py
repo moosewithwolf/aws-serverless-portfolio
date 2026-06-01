@@ -365,8 +365,9 @@ def test_chat_post_does_not_call_model_backend():
 
 def test_chat_get_returns_pending_from_mocked_dynamodb():
     """GET /chat/{id} should return PENDING from a mocked DynamoDB item."""
+    request_id = "chat_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     mock_item = {
-        "requestId": "chat_abc123",
+        "requestId": request_id,
         "status": "PENDING",
         "message": "Hello",
         "createdAt": 1234567890,
@@ -374,31 +375,33 @@ def test_chat_get_returns_pending_from_mocked_dynamodb():
     }
 
     with MockAws(dynamodb_item=mock_item):
-        response = invoke("/chat/chat_abc123", method="GET")
+        response = invoke(f"/chat/{request_id}", method="GET")
 
     assert response["statusCode"] == 200
     payload = body(response)
-    assert payload["requestId"] == "chat_abc123"
+    assert payload["requestId"] == request_id
     assert payload["status"] == "PENDING"
     assert "message" not in payload
 
 
 def test_chat_get_returns_done_with_message_from_mocked_dynamodb():
     """GET /chat/{id} should return DONE with message/sanitized."""
+    request_id = "chat_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     mock_item = {
-        "requestId": "chat_def456",
+        "requestId": request_id,
         "status": "DONE",
         "message": "This portfolio uses Lambda, API Gateway, and CloudFront.",
         "createdAt": 1234567890,
         "ttl": 1234571490,
+        "sanitized": True,
     }
 
     with MockAws(dynamodb_item=mock_item):
-        response = invoke("/chat/chat_def456", method="GET")
+        response = invoke(f"/chat/{request_id}", method="GET")
 
     assert response["statusCode"] == 200
     payload = body(response)
-    assert payload["requestId"] == "chat_def456"
+    assert payload["requestId"] == request_id
     assert payload["status"] == "DONE"
     assert payload["message"] == "This portfolio uses Lambda, API Gateway, and CloudFront."
     assert payload["sanitized"] is True
@@ -406,8 +409,9 @@ def test_chat_get_returns_done_with_message_from_mocked_dynamodb():
 
 def test_chat_get_returns_error_with_safe_message_from_mocked_dynamodb():
     """GET /chat/{id} should return ERROR with safe message, sanitized: false."""
+    request_id = "chat_cccccccccccccccccccccccccccccccc"
     mock_item = {
-        "requestId": "chat_err789",
+        "requestId": request_id,
         "status": "ERROR",
         "message": "Processing failed. Please try again later.",
         "createdAt": 1234567890,
@@ -415,11 +419,11 @@ def test_chat_get_returns_error_with_safe_message_from_mocked_dynamodb():
     }
 
     with MockAws(dynamodb_item=mock_item):
-        response = invoke("/chat/chat_err789", method="GET")
+        response = invoke(f"/chat/{request_id}", method="GET")
 
     assert response["statusCode"] == 200
     payload = body(response)
-    assert payload["requestId"] == "chat_err789"
+    assert payload["requestId"] == request_id
     assert payload["status"] == "ERROR"
     assert payload["sanitized"] is False
     assert "Processing failed" in payload["message"]
@@ -428,7 +432,7 @@ def test_chat_get_returns_error_with_safe_message_from_mocked_dynamodb():
 def test_chat_get_missing_item_returns_404():
     """GET /chat/{id} should return 404 for a missing DynamoDB item."""
     with MockAws(dynamodb_item=None):
-        response = invoke("/chat/nonexistent", method="GET")
+        response = invoke("/chat/chat_dddddddddddddddddddddddddddddddd", method="GET")
 
     assert response["statusCode"] == 404
     payload = body(response)
@@ -439,8 +443,8 @@ def test_chat_get_no_table_name_returns_404():
     """GET /chat/{id} without table name configured should return 404."""
     with patch.dict(app.os.environ, {}, clear=True):
         event = {
-            "rawPath": "/chat/chat_noenv",
-            "path": "/chat/chat_noenv",
+            "rawPath": "/chat/chat_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "path": "/chat/chat_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
             "requestContext": {"http": {"method": "GET"}},
             "httpMethod": "GET",
         }
@@ -452,7 +456,7 @@ def test_chat_get_no_table_name_returns_404():
 def test_chat_get_service_unavailable_returns_503():
     """GET /chat/{id} with DynamoDB error should return 503 with safe message."""
     with MockAws(dynamodb_exception=Exception("Service error")):
-        response = invoke("/chat/chat_error", method="GET")
+        response = invoke("/chat/chat_ffffffffffffffffffffffffffffffff", method="GET")
 
     assert response["statusCode"] == 503
     payload = body(response)
@@ -461,8 +465,9 @@ def test_chat_get_service_unavailable_returns_503():
 
 def test_chat_get_with_unknown_status_treated_as_pending():
     """Unknown status in DynamoDB should be treated as PENDING."""
+    request_id = "chat_11111111111111111111111111111111"
     mock_item = {
-        "requestId": "chat_unknown",
+        "requestId": request_id,
         "status": "UNKNOWN_STATUS",
         "message": "Hello",
         "createdAt": 1234567890,
@@ -470,11 +475,76 @@ def test_chat_get_with_unknown_status_treated_as_pending():
     }
 
     with MockAws(dynamodb_item=mock_item):
-        response = invoke("/chat/chat_unknown", method="GET")
+        response = invoke(f"/chat/{request_id}", method="GET")
 
     assert response["statusCode"] == 200
     payload = body(response)
     assert payload["status"] == "PENDING"
+
+
+# ---------------------------------------------------------------------------
+# GET /chat/<requestId> — sanitized flag from DynamoDB item
+# ---------------------------------------------------------------------------
+
+def test_chat_get_returns_sanitized_false_when_dynamodb_item_has_sanitized_false():
+    """GET /chat/{id} should echo sanitized=false when the DynamoDB item has it.
+
+    When status=DONE the handler returns the item's sanitized field.
+    If the item has sanitized=false the response must also have sanitized=false.
+    """
+    request_id = "chat_22222222222222222222222222222222"
+    mock_item = {
+        "requestId": request_id,
+        "status": "DONE",
+        "message": "This portfolio uses Lambda, API Gateway, and CloudFront.",
+        "createdAt": 1234567890,
+        "ttl": 1234571490,
+        "sanitized": False,
+    }
+
+    with MockAws(dynamodb_item=mock_item):
+        response = invoke(f"/chat/{request_id}", method="GET")
+
+    assert response["statusCode"] == 200
+    payload = body(response)
+    assert payload["requestId"] == request_id
+    assert payload["status"] == "DONE"
+    assert payload["sanitized"] is False
+
+
+# ---------------------------------------------------------------------------
+# GET /chat/<requestId> — malformed requestId validation
+# ---------------------------------------------------------------------------
+
+def test_chat_get_rejects_malformed_request_id_bad():
+    """GET /chat/bad should return 400 with message 'Invalid requestId'."""
+    with MockAws(dynamodb_item=None):
+        response = invoke("/chat/bad", method="GET")
+
+    assert response["statusCode"] == 400
+    payload = body(response)
+    assert payload["message"] == "Invalid requestId"
+
+
+def test_chat_get_rejects_malformed_request_id_chat_underscore():
+    """GET /chat/chat_ should return 400 with message 'Invalid requestId'."""
+    with MockAws(dynamodb_item=None):
+        response = invoke("/chat/chat_", method="GET")
+
+    assert response["statusCode"] == 400
+    payload = body(response)
+    assert payload["message"] == "Invalid requestId"
+
+
+def test_chat_get_rejects_malformed_request_id_500char():
+    """GET /chat/{500-char string} should return 400 with message 'Invalid requestId'."""
+    long_id = "a" * 500
+    with MockAws(dynamodb_item=None):
+        response = invoke(f"/chat/{long_id}", method="GET")
+
+    assert response["statusCode"] == 400
+    payload = body(response)
+    assert payload["message"] == "Invalid requestId"
 
 
 # ---------------------------------------------------------------------------

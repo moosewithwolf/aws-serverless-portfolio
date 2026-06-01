@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import uuid
 from typing import Any
@@ -244,14 +245,27 @@ def _send_chat_job(request_id: str, message: str) -> bool:
 # GET /chat/<requestId> — poll status from DynamoDB
 # ---------------------------------------------------------------------------
 
+# Pattern: exactly "chat_" followed by 32 lowercase hex characters (uuid4 hex)
+_VALID_REQUEST_ID_RE = re.compile(r"^chat_[0-9a-f]{32}$")
+
+
+def _is_valid_request_id(request_id: str) -> bool:
+    """Return True if request_id matches the expected format."""
+    return bool(_VALID_REQUEST_ID_RE.match(request_id))
+
+
 def _handle_chat_get(request_id: str) -> dict[str, Any]:
     """Poll endpoint — reads status from DynamoDB.
 
     Returns:
+    - 400 if the requestId format is invalid
     - 404 if request not found
     - 200 with PENDING/DONE/ERROR status
     - Never exposes internal errors
     """
+    if not _is_valid_request_id(request_id):
+        return _response(400, {"message": "Invalid requestId"})
+
     table_name = _chat_table_name()
     if not table_name:
         return _response(404, {"message": "Request not found"})
@@ -286,7 +300,7 @@ def _handle_chat_get(request_id: str) -> dict[str, Any]:
             "requestId": request_id,
             "status": ChatStatus.DONE.value,
             "message": item.get("message", ""),
-            "sanitized": True,
+            "sanitized": item.get("sanitized", False),
         }))
 
     if status == ChatStatus.ERROR.value:
