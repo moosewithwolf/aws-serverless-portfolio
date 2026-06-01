@@ -593,7 +593,7 @@
                   <td>채팅 UI 활성/비활성 설정</td>
                 </tr>
                 <tr>
-                  <td><code>frontend/src/styles.css</code></td>
+                  <td><code>frontend/src/app/global.css</code></td>
                   <td>전체 UI 스타일</td>
                 </tr>
               </tbody>
@@ -620,7 +620,7 @@
           <div>
             <h3>V2 Local AI API</h3>
             <p>
-              <code>LocalAiFunction</code>은 채팅 요청을 직접 모델에 보내지 않는다.
+              <code>ChatApiFunction</code>은 채팅 요청을 직접 모델에 보내지 않는다.
               입력을 검증하고 DynamoDB에 <code>PENDING</code> 상태를 저장한 뒤 SQS에 job을 넣는다.
             </p>
             <p>
@@ -641,7 +641,7 @@
           </div>
           <div class="arrow">→</div>
           <div class="node teal">
-            <h3>2. LocalAiFunction</h3>
+            <h3>2. ChatApiFunction</h3>
             <p>입력 검증 후 DynamoDB에 <code>PENDING</code> 저장, SQS에 작업 발행.</p>
           </div>
           <div class="arrow">→</div>
@@ -711,7 +711,7 @@
             </tr>
             <tr>
               <td>Chat API</td>
-              <td><code>LocalAiFunction</code></td>
+              <td><code>ChatApiFunction</code></td>
               <td><code>ca-central-1</code></td>
               <td>채팅 요청 접수, 상태 조회, SQS enqueue</td>
             </tr>
@@ -748,15 +748,15 @@
                 <p>Docker 안에서 llama.cpp server 실행</p>
               </div>
               <div class="file-item">
-                <code>local_ai/harness/harness/sqs_agent.py</code>
+                <code>local_ai/harness/local_agent/chat_worker/sqs_agent.py</code>
                 <p>SQS polling, 모델 호출, DynamoDB 업데이트</p>
               </div>
               <div class="file-item">
-                <code>local_ai/harness/harness/model_gateway.py</code>
+                <code>local_ai/harness/local_agent/chat_worker/model_gateway.py</code>
                 <p>입력 검증, context 로드, 모델 호출, 출력 검증</p>
               </div>
               <div class="file-item">
-                <code>local_ai/harness/harness/container_model_client.py</code>
+                <code>local_ai/harness/local_agent/chat_worker/container_model_client.py</code>
                 <p><code>http://127.0.0.1:8080/v1/chat/completions</code> 호출</p>
               </div>
             </div>
@@ -799,17 +799,17 @@
             </tr>
             <tr>
               <td><code>CHATBOT_ENABLED</code></td>
-              <td>LocalAiFunction</td>
+              <td>ChatApiFunction</td>
               <td>AWS Lambda에서 public chat intake 허용 여부. 현재 <code>false</code>.</td>
             </tr>
             <tr>
               <td><code>CHAT_REQUEST_TABLE</code></td>
-              <td>LocalAiFunction, local agent</td>
+              <td>ChatApiFunction, local agent</td>
               <td>DynamoDB 테이블 이름. 현재 <code>chat-requests</code>.</td>
             </tr>
             <tr>
               <td><code>CHAT_QUEUE_URL</code></td>
-              <td>LocalAiFunction, local agent</td>
+              <td>ChatApiFunction, local agent</td>
               <td>SQS queue URL. agent 실행 시 필요.</td>
             </tr>
             <tr>
@@ -867,7 +867,7 @@
             <tr>
               <td>Local AI run</td>
               <td><code>local_ai/harness/</code> + 프로젝트 루트</td>
-              <td>Docker model server와 <code>harness.chat_worker.sqs_agent</code> 실행</td>
+              <td>Docker model server와 <code>local_agent.chat_worker.sqs_agent</code> 실행</td>
             </tr>
           </tbody>
         </table>

@@ -1,4 +1,4 @@
-"""Lambda handler for the Local AI Chatbot harness.
+"""Lambda handler for the portfolio chat API.
 
 Routes incoming API Gateway events to the harness, applies safety
 validation, serialises responses with camelCase keys, and returns
@@ -21,8 +21,12 @@ from typing import Any
 
 import boto3
 
-from harness.shared.contracts import ChatRequest, ChatStatus
-from harness.shared.safety import validate_input
+try:
+    from .contracts import ChatRequest, ChatStatus
+    from .safety import validate_input
+except ImportError:  # pragma: no cover - used by AWS Lambda's flat handler import
+    from contracts import ChatRequest, ChatStatus
+    from safety import validate_input
 
 
 # ---------------------------------------------------------------------------

@@ -12,7 +12,7 @@ import functools
 from pathlib import Path
 from typing import Optional
 
-from harness.shared.safety import validate_context_file
+from local_agent.shared.safety import validate_context_file
 
 _ROOT = Path(__file__).parents[2]  # local_ai/harness/
 

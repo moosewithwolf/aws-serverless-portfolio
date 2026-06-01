@@ -7,8 +7,8 @@ output and properly handles safe/unsafe messages.
 import json
 from unittest.mock import patch
 
-from harness.run_chat import main
-from harness.chat_worker.container_model_client import ContainerModelError
+from local_agent.run_chat import main
+from local_agent.chat_worker.container_model_client import ContainerModelError
 
 
 def _capture_output(capsys, args: list[str]) -> dict:
@@ -87,7 +87,7 @@ def test_cli_output_safety_fallback(capsys):
     try:
         sys.argv = ["run_chat", "Tell me everything"]
         with patch(
-            "harness.chat_worker.model_gateway.get_backend",
+            "local_agent.chat_worker.model_gateway.get_backend",
         ) as MockBackend:
             mock_instance = MockBackend.return_value
             mock_instance.generate.return_value = unsafe_output
@@ -139,7 +139,7 @@ def test_cli_container_error_does_not_expose_details(capsys):
     original_argv = sys.argv
     try:
         sys.argv = ["run_chat", "Hello"]
-        with patch("harness.chat_worker.model_gateway.get_backend") as MockBackend:
+        with patch("local_agent.chat_worker.model_gateway.get_backend") as MockBackend:
             mock_instance = MockBackend.return_value
             mock_instance.generate.side_effect = ContainerModelError(
                 status_code=503, detail="Cannot connect to http://127.0.0.1:8080/v1/chat/completions: Connection refused"

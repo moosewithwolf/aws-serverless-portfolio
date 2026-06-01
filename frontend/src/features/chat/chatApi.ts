@@ -12,7 +12,7 @@
 import { apiBaseUrl } from "../../shared/api/portfolioApi";
 
 // ---------------------------------------------------------------------------
-// Types (mirror local_ai/harness/harness/contracts.py)
+// Types (mirror backend/chat_api/contracts.py)
 // ---------------------------------------------------------------------------
 
 export type ChatRequest = {

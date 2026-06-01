@@ -1,4 +1,4 @@
-"""Unit tests for the Local AI Chatbot Lambda handler.
+"""Unit tests for the portfolio chat API Lambda handler.
 
 Follows the existing test pattern: `invoke()` helper constructs dual-format
 Lambda events; `body()` decodes JSON strings.
@@ -16,7 +16,7 @@ Phase 3 — AWS async chat relay tests cover:
 import json
 from unittest.mock import MagicMock, patch
 
-from harness.chat_api import app
+from chat_api import app
 
 
 def invoke(path: str, method: str = "GET", body: str | None = None):
@@ -344,7 +344,7 @@ def test_chat_post_does_not_call_model_backend():
     """POST /chat should never invoke the model backend directly."""
     # Verify that the model client module is never imported during POST /chat.
     # The handler only touches DynamoDB, SQS, safety validation, and serialisation.
-    from harness.chat_api import app as handler_module
+    from chat_api import app as handler_module
     import sys
 
     model_modules = [m for m in sys.modules if "llama" in m.lower() or "model_client" in m.lower()]
@@ -614,7 +614,7 @@ def test_unknown_route_returns_404():
 
 def test_chat_status_uses_error_not_failed():
     """Verify the status enum uses ERROR, not FAILED."""
-    from harness.shared.contracts import ChatStatus
+    from chat_api.contracts import ChatStatus
 
     assert hasattr(ChatStatus, "ERROR")
     assert not hasattr(ChatStatus, "FAILED")
@@ -679,9 +679,6 @@ def _load_template():
         os.path.dirname(__file__),
         "..",
         "..",
-        "..",
-        "..",
-        "backend",
         "template.yaml",
     )
     template_path = os.path.abspath(template_path)
@@ -762,19 +759,19 @@ def test_template_has_throttling():
 def test_template_log_group_uses_function_refs():
     """Log group names must use !Sub with function refs, not hard-coded stack names.
 
-    Hard-coded names like `/aws/lambda/portfolio-stack-LocalAiFunction`
+    Hard-coded names like `/aws/lambda/portfolio-stack-ChatApiFunction`
     break when the stack is deployed under a different name.
     """
     template = _load_template()
     resources = template["Resources"]
 
-    # LocalAiFunctionLogs log group
-    local_logs = resources["LocalAiFunctionLogs"]["Properties"]["LogGroupName"]
+    # ChatApiFunctionLogs log group
+    local_logs = resources["ChatApiFunctionLogs"]["Properties"]["LogGroupName"]
     assert isinstance(local_logs, _FnSub), (
-        f"LocalAiFunctionLogs LogGroupName should use !Sub, got {type(local_logs).__name__}"
+        f"ChatApiFunctionLogs LogGroupName should use !Sub, got {type(local_logs).__name__}"
     )
-    assert "LocalAiFunction" in local_logs.value, (
-        "LogGroupName must reference ${LocalAiFunction}"
+    assert "ChatApiFunction" in local_logs.value, (
+        "LogGroupName must reference ${ChatApiFunction}"
     )
     assert "portfolio-stack" not in local_logs.value, (
         "LogGroupName must not hard-code 'portfolio-stack'; use function ref"
@@ -824,8 +821,8 @@ def test_template_no_xray_tracing():
     )
 
 
-def test_template_local_ai_function_env_and_policies():
-    """Verify LocalAiFunction has correct env vars and IAM policies.
+def test_template_chat_api_function_env_and_policies():
+    """Verify ChatApiFunction has correct env vars and IAM policies.
 
     The IAM policy must be scoped to only the required actions:
     - dynamodb:GetItem
@@ -837,7 +834,7 @@ def test_template_local_ai_function_env_and_policies():
     """
     template = _load_template()
 
-    func = template["Resources"]["LocalAiFunction"]["Properties"]
+    func = template["Resources"]["ChatApiFunction"]["Properties"]
 
     # Check environment variables
     env = func["Environment"]["Variables"]
@@ -867,12 +864,12 @@ def test_template_local_ai_function_env_and_policies():
         "sqs:SendMessage",
     ]
     for action in required_actions:
-        assert action in all_actions, f"Required action '{action}' missing from LocalAiFunction IAM policy"
+        assert action in all_actions, f"Required action '{action}' missing from ChatApiFunction IAM policy"
 
     # Forbidden actions — must NOT be present
     forbidden_actions = ["dynamodb:DeleteItem", "dynamodb:Query", "dynamodb:Scan"]
     for action in forbidden_actions:
-        assert action not in all_actions, f"Forbidden action '{action}' should NOT be in LocalAiFunction IAM policy"
+        assert action not in all_actions, f"Forbidden action '{action}' should NOT be in ChatApiFunction IAM policy"
 
 
 # ---------------------------------------------------------------------------
@@ -913,7 +910,7 @@ def test_template_dlq_resource_exists():
 
 
 def test_template_retention_period_not_exceed_ttl():
-    """ChatQueue MessageRetentionPeriod must be <= CHAT_TTL_SECONDS from LocalAiFunction env.
+    """ChatQueue MessageRetentionPeriod must be <= CHAT_TTL_SECONDS from ChatApiFunction env.
 
     If SQS retains messages longer than the DynamoDB TTL, orphaned SQS messages
     can outlive their DynamoDB records, confusing the poller and wasting resources.
@@ -921,7 +918,7 @@ def test_template_retention_period_not_exceed_ttl():
     template = _load_template()
     sqs = template["Resources"]["ChatQueue"]["Properties"]
     retention = sqs.get("MessageRetentionPeriod", 0)
-    func = template["Resources"]["LocalAiFunction"]["Properties"]
+    func = template["Resources"]["ChatApiFunction"]["Properties"]
     ttl = int(func["Environment"]["Variables"]["CHAT_TTL_SECONDS"])
     assert int(retention) <= ttl, (
         f"MessageRetentionPeriod ({retention}) must be <= CHAT_TTL_SECONDS ({ttl})"

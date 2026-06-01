@@ -12,8 +12,8 @@ It is not a general ChatGPT replacement, coding agent, terminal assistant, AWS o
 
 Runtime path:
 
-1. `local_ai/harness/harness/model_gateway.py`
-2. `load_context()` from `local_ai/harness/harness/prompt_builder.py`
+1. `local_ai/harness/local_agent/chat_worker/model_gateway.py`
+2. `load_context()` from `local_ai/harness/local_agent/chat_worker/prompt_builder.py`
 3. `local_ai/harness/prompts/system_prompt.md`
 4. `local_ai/harness/context/*.md`
 5. user message

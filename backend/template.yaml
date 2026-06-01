@@ -23,11 +23,11 @@ Resources:
   # GatewayLogs removed: the previous log group was hard-coded and not wired
   # to access logging. Body-level data tracing stays disabled for privacy.
 
-  # Local AI Function Logs — retention set to 14 days (Phase 5)
-  LocalAiFunctionLogs:
+  # Chat API Function Logs — retention set to 14 days (Phase 5)
+  ChatApiFunctionLogs:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${LocalAiFunction}"
+      LogGroupName: !Sub "/aws/lambda/${ChatApiFunction}"
       RetentionInDays: 14
 
   PortfolioApiFunctionLogs:
@@ -67,11 +67,11 @@ Resources:
         deadLetterTargetArn: !GetAtt ChatDeadLetterQueue.Arn
         maxReceiveCount: 3
 
-  LocalAiFunction:
+  ChatApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../local_ai/harness/
-      Handler: harness.chat_api.app.lambda_handler
+      CodeUri: chat_api/
+      Handler: app.lambda_handler
       Runtime: python3.12
       Architectures:
         - x86_64
@@ -159,9 +159,9 @@ Outputs:
   PortfolioApiFunctionIamRole:
     Description: "Implicit IAM Role created for the Portfolio API function"
     Value: !GetAtt PortfolioApiFunctionRole.Arn
-  LocalAiFunction:
-    Description: "Local AI Chatbot Lambda Function ARN"
-    Value: !GetAtt LocalAiFunction.Arn
-  LocalAiFunctionIamRole:
-    Description: "Implicit IAM Role created for the Local AI function"
-    Value: !GetAtt LocalAiFunctionRole.Arn
+  ChatApiFunction:
+    Description: "Portfolio chat API Lambda Function ARN"
+    Value: !GetAtt ChatApiFunction.Arn
+  ChatApiFunctionIamRole:
+    Description: "Implicit IAM Role created for the chat API function"
+    Value: !GetAtt ChatApiFunctionRole.Arn

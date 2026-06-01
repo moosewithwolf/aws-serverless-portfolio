@@ -31,7 +31,7 @@ _RESPONSES: dict[str, str] = {
         "My portfolio backend runs on AWS Lambda with API Gateway. "
         "The frontend is a React SPA hosted on S3 behind CloudFront. "
         "The SAM template defines routes for `/health` and `/profile`. "
-        "This v2 adds a `LocalAiFunction` Lambda that processes chat messages"
+        "This v2 adds a `ChatApiFunction` Lambda that processes chat messages"
         " through a Python harness with safety validation."
     ),
     "certifications": (

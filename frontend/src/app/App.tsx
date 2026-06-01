@@ -5,7 +5,7 @@ import { GlobalChatWidget } from "../features/chat/GlobalChatWidget";
 import { loadChatConfig, type ChatConfig } from "../features/chat/chatConfig";
 import { fetchHealth, fetchProfile, type Health, type Profile } from "../shared/api/portfolioApi";
 import { awsCertifications, fallbackProfile, localModelName, projectLinks } from "../shared/data/portfolioData";
-import "../styles/global.css";
+import "./global.css";
 
 type View = "home" | "projects" | "resume" | "ai-chat";
 const views: View[] = ["home", "projects", "resume", "ai-chat"];

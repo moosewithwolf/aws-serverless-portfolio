@@ -12,8 +12,8 @@ from unittest.mock import patch
 
 import pytest
 
-from harness.chat_worker.model_gateway import process_message
-from harness.chat_worker.container_model_client import ContainerModelError
+from local_agent.chat_worker.model_gateway import process_message
+from local_agent.chat_worker.container_model_client import ContainerModelError
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +65,7 @@ def test_unsafe_input_returns_error(capsys):
 
 def test_unsafe_output_replaced_with_fallback(capsys):
     """Unsafe model output must be replaced with the safe fallback."""
-    with patch("harness.chat_worker.model_gateway.get_backend") as MockBackend:
+    with patch("local_agent.chat_worker.model_gateway.get_backend") as MockBackend:
         mock_instance = MockBackend.return_value
         mock_instance.generate.return_value = UNSAFE_OUTPUT
 
@@ -83,7 +83,7 @@ def test_unsafe_output_replaced_with_fallback(capsys):
 
 def test_container_model_error_returns_safe_error(capsys):
     """ContainerModelError should return ERROR with a safe message."""
-    with patch("harness.chat_worker.model_gateway.get_backend") as MockBackend:
+    with patch("local_agent.chat_worker.model_gateway.get_backend") as MockBackend:
         mock_instance = MockBackend.return_value
         mock_instance.generate.side_effect = ContainerModelError(
             status_code=503,
@@ -119,7 +119,7 @@ def test_auto_generates_request_id():
 
 def test_generic_exception_returns_safe_error(capsys):
     """Any unexpected exception during model generation should return ERROR."""
-    with patch("harness.chat_worker.model_gateway.get_backend") as MockBackend:
+    with patch("local_agent.chat_worker.model_gateway.get_backend") as MockBackend:
         mock_instance = MockBackend.return_value
         mock_instance.generate.side_effect = RuntimeError("Internal error")
 

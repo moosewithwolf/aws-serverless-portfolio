@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 import requests
 
-from harness.chat_worker.container_model_client import (
+from local_agent.chat_worker.container_model_client import (
     ContainerModelBackend,
     ContainerModelError,
     CONTAINER_MODEL_ENDPOINT,
@@ -47,7 +47,7 @@ def test_successful_chat_completion_parses_assistant_message():
         }]
     })
 
-    with patch("harness.chat_worker.container_model_client.requests.post", return_value=mock_resp):
+    with patch("local_agent.chat_worker.container_model_client.requests.post", return_value=mock_resp):
         backend = ContainerModelBackend()
         result = backend.generate("What services are used?")
 
@@ -62,7 +62,7 @@ def test_successful_chat_completion_parses_assistant_message():
 def test_connection_failure_returns_controlled_error():
     """Verify a ConnectionError is wrapped in ContainerModelError."""
     with patch(
-        "harness.chat_worker.container_model_client.requests.post",
+        "local_agent.chat_worker.container_model_client.requests.post",
         side_effect=requests.exceptions.ConnectionError("refused"),
     ):
         backend = ContainerModelBackend()
@@ -76,7 +76,7 @@ def test_connection_failure_returns_controlled_error():
 def test_timeout_returns_controlled_error():
     """Verify a Timeout is wrapped in ContainerModelError."""
     with patch(
-        "harness.chat_worker.container_model_client.requests.post",
+        "local_agent.chat_worker.container_model_client.requests.post",
         side_effect=requests.exceptions.Timeout("timed out"),
     ):
         backend = ContainerModelBackend()
@@ -96,7 +96,7 @@ def test_non_2xx_response_returns_controlled_error():
     """Verify a 500 response raises ContainerModelError with status_code."""
     mock_resp = _mock_response(500, {"error": {"message": "server error"}})
 
-    with patch("harness.chat_worker.container_model_client.requests.post", return_value=mock_resp):
+    with patch("local_agent.chat_worker.container_model_client.requests.post", return_value=mock_resp):
         backend = ContainerModelBackend()
         with pytest.raises(ContainerModelError) as exc_info:
             backend.generate("test")
@@ -109,7 +109,7 @@ def test_429_response_returns_controlled_error():
     """Verify a 429 (rate limit) raises ContainerModelError."""
     mock_resp = _mock_response(429, {"error": {"message": "rate limited"}})
 
-    with patch("harness.chat_worker.container_model_client.requests.post", return_value=mock_resp):
+    with patch("local_agent.chat_worker.container_model_client.requests.post", return_value=mock_resp):
         backend = ContainerModelBackend()
         with pytest.raises(ContainerModelError) as exc_info:
             backend.generate("test")
@@ -128,7 +128,7 @@ def test_invalid_json_returns_controlled_error():
     mock_resp.status_code = 200
     mock_resp._content = b"not json at all"
 
-    with patch("harness.chat_worker.container_model_client.requests.post", return_value=mock_resp):
+    with patch("local_agent.chat_worker.container_model_client.requests.post", return_value=mock_resp):
         backend = ContainerModelBackend()
         with pytest.raises(ContainerModelError) as exc_info:
             backend.generate("test")
@@ -146,7 +146,7 @@ def test_missing_choices_returns_controlled_error():
     """Verify response without 'choices' raises ContainerModelError."""
     mock_resp = _mock_response(200, {"id": "some-id", "model": "test"})
 
-    with patch("harness.chat_worker.container_model_client.requests.post", return_value=mock_resp):
+    with patch("local_agent.chat_worker.container_model_client.requests.post", return_value=mock_resp):
         backend = ContainerModelBackend()
         with pytest.raises(ContainerModelError) as exc_info:
             backend.generate("test")
@@ -159,7 +159,7 @@ def test_empty_choices_returns_controlled_error():
     """Verify response with empty choices array raises ContainerModelError."""
     mock_resp = _mock_response(200, {"choices": []})
 
-    with patch("harness.chat_worker.container_model_client.requests.post", return_value=mock_resp):
+    with patch("local_agent.chat_worker.container_model_client.requests.post", return_value=mock_resp):
         backend = ContainerModelBackend()
         with pytest.raises(ContainerModelError) as exc_info:
             backend.generate("test")
@@ -172,7 +172,7 @@ def test_missing_message_field_returns_controlled_error():
     """Verify choice without 'message' raises ContainerModelError."""
     mock_resp = _mock_response(200, {"choices": [{"finish_reason": "stop"}]})
 
-    with patch("harness.chat_worker.container_model_client.requests.post", return_value=mock_resp):
+    with patch("local_agent.chat_worker.container_model_client.requests.post", return_value=mock_resp):
         backend = ContainerModelBackend()
         with pytest.raises(ContainerModelError) as exc_info:
             backend.generate("test")
@@ -187,7 +187,7 @@ def test_empty_content_returns_controlled_error():
         "choices": [{"message": {"role": "assistant", "content": ""}}]
     })
 
-    with patch("harness.chat_worker.container_model_client.requests.post", return_value=mock_resp):
+    with patch("local_agent.chat_worker.container_model_client.requests.post", return_value=mock_resp):
         backend = ContainerModelBackend()
         with pytest.raises(ContainerModelError) as exc_info:
             backend.generate("test")
