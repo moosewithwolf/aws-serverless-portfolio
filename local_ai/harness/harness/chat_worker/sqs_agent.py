@@ -5,10 +5,10 @@ model gateway, and writes the result back to DynamoDB before deleting
 the SQS message.
 
 Run once::
-    PYTHONPATH=local_ai/harness python -m harness.sqs_agent --once
+    PYTHONPATH=local_ai/harness python -m harness.chat_worker.sqs_agent --once
 
 Loop continuously (default)::
-    PYTHONPATH=local_ai/harness python -m harness.sqs_agent
+    PYTHONPATH=local_ai/harness python -m harness.chat_worker.sqs_agent
 """
 
 from __future__ import annotations
@@ -30,8 +30,8 @@ except ImportError:
 
 import os
 
-from harness.model_gateway import process_message
-from harness.contracts import ChatStatus
+from harness.chat_worker.model_gateway import process_message
+from harness.shared.contracts import ChatStatus
 
 # ---------------------------------------------------------------------------
 # Configuration

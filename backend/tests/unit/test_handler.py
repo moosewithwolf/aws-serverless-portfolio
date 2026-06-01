@@ -1,6 +1,6 @@
 import json
 
-from hello_world import app
+from portfolio_api import app
 
 
 def invoke(path, method="GET"):

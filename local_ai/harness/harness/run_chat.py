@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import sys
 
-from harness.model_gateway import process_message
+from harness.chat_worker.model_gateway import process_message
 
 
 def main() -> None:

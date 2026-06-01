@@ -136,7 +136,7 @@ cat > "${PLIST_FILE}" <<PLIST
     <string>${ROOT_DIR}/.venv/bin/python</string>
     <string>-u</string>
     <string>-m</string>
-    <string>harness.sqs_agent</string>
+    <string>harness.chat_worker.sqs_agent</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>

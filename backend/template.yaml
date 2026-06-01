@@ -71,7 +71,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../local_ai/harness/
-      Handler: harness.app.lambda_handler
+      Handler: harness.chat_api.app.lambda_handler
       Runtime: python3.12
       Architectures:
         - x86_64
@@ -119,7 +119,7 @@ Resources:
   PortfolioApiFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: hello_world/
+      CodeUri: portfolio_api/
       Handler: app.lambda_handler
       Runtime: python3.12
       Architectures:

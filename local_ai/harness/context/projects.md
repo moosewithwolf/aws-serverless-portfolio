@@ -1,9 +1,9 @@
 # Featured Projects
 
-## 1. NoraHangul
-- **Tag:** Spring Boot / React / AWS
-- **Description:** Student management system with OAuth2/JWT authentication and automated deployment using Docker and GitHub Actions.
+NoraHangul:
+- Stack: Spring Boot, React, AWS
+- Description: Student management system with OAuth2/JWT authentication and automated deployment using Docker and GitHub Actions.
 
-## 2. Cloud Native Backend
-- **Tag:** AWS Lambda / SAM
-- **Description:** Serverless portfolio backend using API Gateway, Lambda, CloudFront, S3, and a roadmap for local AI integration.
+Cloud Native Backend:
+- Stack: AWS Lambda, AWS SAM, API Gateway, SQS, DynamoDB, S3, CloudFront
+- Description: Serverless portfolio backend with async chat relay support and local AI integration.

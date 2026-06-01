@@ -16,7 +16,7 @@ Phase 3 — AWS async chat relay tests cover:
 import json
 from unittest.mock import MagicMock, patch
 
-from harness import app
+from harness.chat_api import app
 
 
 def invoke(path: str, method: str = "GET", body: str | None = None):
@@ -344,7 +344,7 @@ def test_chat_post_does_not_call_model_backend():
     """POST /chat should never invoke the model backend directly."""
     # Verify that the model client module is never imported during POST /chat.
     # The handler only touches DynamoDB, SQS, safety validation, and serialisation.
-    from harness import app as handler_module
+    from harness.chat_api import app as handler_module
     import sys
 
     model_modules = [m for m in sys.modules if "llama" in m.lower() or "model_client" in m.lower()]
@@ -614,7 +614,7 @@ def test_unknown_route_returns_404():
 
 def test_chat_status_uses_error_not_failed():
     """Verify the status enum uses ERROR, not FAILED."""
-    from harness.contracts import ChatStatus
+    from harness.shared.contracts import ChatStatus
 
     assert hasattr(ChatStatus, "ERROR")
     assert not hasattr(ChatStatus, "FAILED")

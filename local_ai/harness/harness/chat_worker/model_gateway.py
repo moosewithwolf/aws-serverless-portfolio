@@ -5,7 +5,7 @@ and the SQS agent share one processing path.
 
 Usage
 -----
-    from harness.model_gateway import process_message
+    from harness.chat_worker.model_gateway import process_message
 
     result = process_message("Tell me about AWS", request_id="chat_abc123")
     # → {"requestId": "...", "status": "DONE", "message": "...", "sanitized": True}
@@ -16,11 +16,11 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from harness.contracts import ChatStatus
+from harness.shared.contracts import ChatStatus
 from harness import get_backend
-from harness.container_model_client import ContainerModelError
-from harness.prompt_builder import load_context
-from harness.safety import validate_input, validate_output
+from harness.chat_worker.container_model_client import ContainerModelError
+from harness.chat_worker.prompt_builder import load_context
+from harness.shared.safety import validate_input, validate_output
 
 SAFE_FALLBACK_MESSAGE = (
     "I cannot share that information. Please ask about my skills, "

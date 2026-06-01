@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from harness.sqs_agent import (
+from harness.chat_worker.sqs_agent import (
     _handle_message,
     _receive_sqs_messages,
     _update_dynamodb,
@@ -22,7 +22,7 @@ from harness.sqs_agent import (
     poll_once,
     run_loop,
 )
-from harness.contracts import ChatStatus
+from harness.shared.contracts import ChatStatus
 
 
 # ---------------------------------------------------------------------------
@@ -67,8 +67,8 @@ def _mock_resources(table_item=None, table_exception=None, sqs_send_ok=True, sqs
     mock_ddb.Table.return_value = mock_table
 
     patches = []
-    patches.append(patch("harness.sqs_agent._ddb_resource", return_value=mock_ddb))
-    patches.append(patch("harness.sqs_agent._sqs_resource", return_value=mock_sqs))
+    patches.append(patch("harness.chat_worker.sqs_agent._ddb_resource", return_value=mock_ddb))
+    patches.append(patch("harness.chat_worker.sqs_agent._sqs_resource", return_value=mock_sqs))
 
     # Store mock objects for assertion after test
     ctx = MagicMock()
@@ -103,8 +103,8 @@ class _MockPatches:
         self.old_values = {}
 
     def setup(self):
-        p1 = patch("harness.sqs_agent._ddb_resource")
-        p2 = patch("harness.sqs_agent._sqs_resource")
+        p1 = patch("harness.chat_worker.sqs_agent._ddb_resource")
+        p2 = patch("harness.chat_worker.sqs_agent._sqs_resource")
         self.ddb_mock = p1.start()
         self.sqs_mock = p2.start()
         self.patches = [p1, p2]
@@ -145,7 +145,7 @@ def test_valid_message_processes_and_deletes():
     ctx.setup()
     try:
         # Make model gateway return a DONE result
-        with patch("harness.sqs_agent.process_message") as mock_gateway:
+        with patch("harness.chat_worker.sqs_agent.process_message") as mock_gateway:
             mock_gateway.return_value = {
                 "requestId": "chat_abc123",
                 "status": "DONE",
@@ -209,7 +209,7 @@ def test_delete_sqs_message_supports_real_boto3_queue_shape():
     sqs = MagicMock()
     sqs.Queue.return_value = queue
 
-    with patch("harness.sqs_agent._sqs_resource", return_value=sqs):
+    with patch("harness.chat_worker.sqs_agent._sqs_resource", return_value=sqs):
         assert _delete_sqs_message("https://queue.url", REAL_RECEIPT_HANDLE) is True
 
     queue.meta.client.delete_message.assert_called_once_with(
@@ -227,7 +227,7 @@ def test_dynamodb_failure_prevents_sqs_delete():
     ctx = _MockPatches()
     ctx.setup()
     try:
-        with patch("harness.sqs_agent.process_message") as mock_gateway:
+        with patch("harness.chat_worker.sqs_agent.process_message") as mock_gateway:
             mock_gateway.return_value = {
                 "requestId": "chat_err1",
                 "status": "DONE",
@@ -266,7 +266,7 @@ def test_invalid_json_does_not_call_gateway_or_delete():
     ctx = _MockPatches()
     ctx.setup()
     try:
-        with patch("harness.sqs_agent.process_message") as mock_gateway:
+        with patch("harness.chat_worker.sqs_agent.process_message") as mock_gateway:
             # _handle_message returns False, so poll_once won't delete
             result = _handle_message("not valid json", "chat-requests")
 
@@ -287,7 +287,7 @@ def test_missing_request_id_fails_closed():
     ctx.setup()
     try:
         body_without_id = json.dumps({"message": "Hello"})
-        with patch("harness.sqs_agent.process_message") as mock_gateway:
+        with patch("harness.chat_worker.sqs_agent.process_message") as mock_gateway:
             result = _handle_message(body_without_id, "chat-requests")
 
         assert result is False
@@ -314,7 +314,7 @@ def test_missing_message_with_request_id_writes_error_and_deletes():
         }
         ctx.queue_mock.receive_message.return_value = {"Messages": [mock_msg]}
 
-        with patch("harness.sqs_agent._update_dynamodb") as mock_ddb:
+        with patch("harness.chat_worker.sqs_agent._update_dynamodb") as mock_ddb:
             mock_ddb.return_value = True  # simulate successful write
 
             poll_once("chat-requests", "https://queue.url")
@@ -347,7 +347,7 @@ def test_model_error_result_writes_error_and_deletes():
         }
         ctx.queue_mock.receive_message.return_value = {"Messages": [mock_msg]}
 
-        with patch("harness.sqs_agent.process_message") as mock_gateway:
+        with patch("harness.chat_worker.sqs_agent.process_message") as mock_gateway:
             mock_gateway.return_value = {
                 "requestId": "chat_model_err",
                 "status": "ERROR",
@@ -386,7 +386,7 @@ def test_once_mode_exits_after_one_poll():
         }
         ctx.queue_mock.receive_message.return_value = {"Messages": [mock_msg]}
 
-        with patch("harness.sqs_agent.process_message") as mock_gateway:
+        with patch("harness.chat_worker.sqs_agent.process_message") as mock_gateway:
             mock_gateway.return_value = {
                 "requestId": "chat_once1",
                 "status": "DONE",
@@ -486,7 +486,7 @@ def test_sqs_delete_failure_after_ddb_success():
         }
         ctx.queue_mock.receive_message.return_value = {"Messages": [mock_msg]}
 
-        with patch("harness.sqs_agent.process_message") as mock_gateway:
+        with patch("harness.chat_worker.sqs_agent.process_message") as mock_gateway:
             mock_gateway.return_value = {
                 "requestId": "chat_del_fail",
                 "status": "DONE",
@@ -518,7 +518,7 @@ def test_handle_message_returns_true_on_success():
     ctx = _MockPatches()
     ctx.setup()
     try:
-        with patch("harness.sqs_agent.process_message") as mock_gateway:
+        with patch("harness.chat_worker.sqs_agent.process_message") as mock_gateway:
             mock_gateway.return_value = {
                 "requestId": "chat_abc123",
                 "status": "DONE",
@@ -544,7 +544,7 @@ def test_handle_message_returns_false_on_ddb_failure():
     ctx = _MockPatches()
     ctx.setup()
     try:
-        with patch("harness.sqs_agent.process_message") as mock_gateway:
+        with patch("harness.chat_worker.sqs_agent.process_message") as mock_gateway:
             mock_gateway.return_value = {
                 "requestId": "chat_err1",
                 "status": "DONE",
@@ -603,7 +603,7 @@ def test_handle_message_missing_message_with_error_write():
     ctx.setup()
     try:
         body_no_msg = json.dumps({"requestId": "chat_no_msg"})
-        with patch("harness.sqs_agent._update_dynamodb") as mock_ddb:
+        with patch("harness.chat_worker.sqs_agent._update_dynamodb") as mock_ddb:
             mock_ddb.return_value = True
             result = _handle_message(body_no_msg, "chat-requests")
         assert result is True
@@ -623,7 +623,7 @@ def test_handle_message_missing_message_failed_error_write():
     ctx.setup()
     try:
         body_no_msg = json.dumps({"requestId": "chat_no_msg"})
-        with patch("harness.sqs_agent._update_dynamodb") as mock_ddb:
+        with patch("harness.chat_worker.sqs_agent._update_dynamodb") as mock_ddb:
             mock_ddb.return_value = False
             result = _handle_message(body_no_msg, "chat-requests")
         assert result is False

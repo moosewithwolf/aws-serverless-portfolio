@@ -21,8 +21,8 @@ from typing import Any
 
 import boto3
 
-from harness.contracts import ChatRequest, ChatStatus
-from harness.safety import validate_input
+from harness.shared.contracts import ChatRequest, ChatStatus
+from harness.shared.safety import validate_input
 
 
 # ---------------------------------------------------------------------------
