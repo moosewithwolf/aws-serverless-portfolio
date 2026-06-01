@@ -126,9 +126,16 @@ function App() {
     const handleHashChange = () => {
       setActiveView(getViewFromHash());
     };
+    const handlePopState = () => {
+      setActiveView(getViewFromHash());
+    };
 
     window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("popstate", handlePopState);
+    };
   }, []);
 
   useEffect(() => {
@@ -175,7 +182,7 @@ function App() {
 
       <main>
         <ApiStatus apiState={apiState} health={health} />
-        {activeView === "home" && <HomeView profile={profile} openProjects={() => setActiveView("projects")} />}
+        {activeView === "home" && <HomeView profile={profile} openProjects={() => setActiveViewFromNav("projects")} />}
         {activeView === "projects" && <ProjectsView projects={profile.projects} />}
         {activeView === "resume" && <ResumeView profile={profile} />}
         {activeView === "ai-chat" && <AiChatView chatConfig={chatConfig} />}

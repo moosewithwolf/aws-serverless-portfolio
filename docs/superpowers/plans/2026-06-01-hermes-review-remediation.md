@@ -487,7 +487,7 @@ Expected: all pass.
 - Modify: `frontend/src/App.tsx`
 - Modify: `frontend/src/App.test.tsx`
 
-- [ ] **Step 1: Assign failing tests**
+- [x] **Step 1: Assign failing tests**
 
 Prompt:
 
@@ -510,7 +510,7 @@ Expected result: at least one new test fails.
 Stop and report changed files and failing test names.
 ```
 
-- [ ] **Step 2: Assign navigation implementation**
+- [x] **Step 2: Assign navigation implementation**
 
 Prompt:
 
@@ -534,7 +534,7 @@ Expected result: pass.
 Stop and report changed files and test result.
 ```
 
-- [ ] **Step 3: Codex verifies frontend routing**
+- [x] **Step 3: Codex verifies frontend routing**
 
 Run:
 
@@ -869,7 +869,7 @@ Codex must never ask Hermes to solve multiple tasks at once.
 - [x] SQS retention and DynamoDB TTL no longer conflict silently.
 - [x] `DONE` chat status preserves stored `sanitized`.
 - [x] Malformed request IDs are rejected before DynamoDB lookup.
-- [ ] Frontend hash navigation and Back/Forward behavior are tested.
+- [x] Frontend hash navigation and Back/Forward behavior are tested.
 - [ ] Chat API validates runtime JSON.
 - [ ] Chat polling/request can be aborted on unmount.
 - [ ] Static frontend data is separated from `App.tsx`, if cleanup task ran.
