@@ -21,9 +21,8 @@ from typing import Any
 
 import boto3
 
-from harness.contracts import ChatRequest, ChatResponse, ChatStatus, ChatStatusResponse
-from harness.prompt_builder import load_context
-from harness.safety import validate_input, validate_output
+from harness.contracts import ChatRequest, ChatStatus
+from harness.safety import validate_input
 
 
 # ---------------------------------------------------------------------------
@@ -356,27 +355,6 @@ def _handle_chat_get(request_id: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _build_prompt(message: str, context: str | None) -> str:
-    """Build the full prompt sent to the model.
-
-    Used by CLI harness (run_chat.py), not by Lambda POST /chat.
-    """
-    parts: list[str] = []
-    if context:
-        parts.append(f"Context:\n{context}")
-    parts.append(f"User: {message}")
-    return "\n\n".join(parts)
-
-
-def _model_to_dict(model: Any) -> dict[str, Any]:
-    """Convert a Pydantic model to a snake_case dict."""
-    if hasattr(model, "model_dump"):
-        return model.model_dump()  # type: ignore[attr-defined]
-    elif hasattr(model, "dict"):
-        return model.dict()
-    return {}
-
 
 def _to_camel_case(data: dict[str, Any]) -> dict[str, Any]:
     """Recursively convert snake_case keys to camelCase."""

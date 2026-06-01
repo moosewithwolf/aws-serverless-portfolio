@@ -702,7 +702,7 @@ Expected result: pass.
 Stop and report changed files and test result.
 ```
 
-- [ ] **Step 2: Assign backend dead-code cleanup**
+- [x] **Step 2: Assign backend dead-code cleanup**
 
 Prompt:
 
@@ -729,7 +729,7 @@ Expected result: pass.
 Stop and report changed files and test result.
 ```
 
-- [ ] **Step 3: Codex verifies cleanup**
+- [x] **Step 3: Codex verifies cleanup**
 
 Run:
 
@@ -864,7 +864,7 @@ Codex must never ask Hermes to solve multiple tasks at once.
 - [x] Codex created/managed the branch or worktree directly.
 - [x] Hermes did not stage, commit, push, or create PRs.
 - [x] Codex created commits only after reviewing diffs and running tests.
-- [ ] Fresh Hermes sessions were used at domain boundaries or when context became stale/heavy.
+- [x] Fresh Hermes sessions were used at domain boundaries or when context became stale/heavy.
 - [x] `backend/template.yaml` defines DLQ/RedrivePolicy in repo, not only in AWS console.
 - [x] SQS retention and DynamoDB TTL no longer conflict silently.
 - [x] `DONE` chat status preserves stored `sanitized`.
@@ -873,10 +873,10 @@ Codex must never ask Hermes to solve multiple tasks at once.
 - [x] Chat API validates runtime JSON.
 - [x] Chat polling/request can be aborted on unmount.
 - [x] Static frontend data is separated from `App.tsx`, if cleanup task ran.
-- [ ] Dead backend handler code is removed, if cleanup task ran.
+- [x] Dead backend handler code is removed, if cleanup task ran.
 - [x] Frontend tests pass.
 - [x] Frontend build passes.
-- [ ] Local AI harness tests pass.
-- [ ] Backend unit tests pass.
-- [ ] `git diff --check` passes.
+- [x] Local AI harness tests pass.
+- [x] Backend unit tests pass.
+- [x] `git diff --check` passes.
 - [ ] Codex pushed the verified branch and opened the PR, if requested for execution.
