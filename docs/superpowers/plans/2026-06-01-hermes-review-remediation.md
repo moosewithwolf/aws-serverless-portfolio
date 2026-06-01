@@ -673,7 +673,7 @@ Expected: all pass.
 - Modify/Create frontend files only after Tasks 3 and 4 pass.
 - Modify backend dead code only after Tasks 1 and 2 pass.
 
-- [ ] **Step 1: Assign frontend data extraction**
+- [x] **Step 1: Assign frontend data extraction**
 
 Prompt:
 
@@ -872,7 +872,7 @@ Codex must never ask Hermes to solve multiple tasks at once.
 - [x] Frontend hash navigation and Back/Forward behavior are tested.
 - [x] Chat API validates runtime JSON.
 - [x] Chat polling/request can be aborted on unmount.
-- [ ] Static frontend data is separated from `App.tsx`, if cleanup task ran.
+- [x] Static frontend data is separated from `App.tsx`, if cleanup task ran.
 - [ ] Dead backend handler code is removed, if cleanup task ran.
 - [x] Frontend tests pass.
 - [x] Frontend build passes.
