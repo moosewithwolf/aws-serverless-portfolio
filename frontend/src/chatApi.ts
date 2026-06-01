@@ -35,6 +35,34 @@ export type ChatStatusResponse = {
 // POST — Submit a chat message
 // ---------------------------------------------------------------------------
 
+// -- Runtime validation helpers (no external schema libraries) --
+
+function isValidChatStatus(status: unknown): status is "PENDING" | "DONE" | "ERROR" {
+  return typeof status === "string" && ["PENDING", "DONE", "ERROR"].includes(status);
+}
+
+function isValidChatResponse(data: unknown): data is ChatResponse {
+  if (data === null || typeof data !== "object") return false;
+  const obj = data as Record<string, unknown>;
+  const status = obj.status;
+  if (!isValidChatStatus(status)) return false;
+  if (status === "PENDING") {
+    return typeof obj.requestId === "string";
+  }
+  // DONE / ERROR: message (if present) must be string, sanitized (if present) must be boolean
+  if ("message" in obj && typeof obj.message !== "string") return false;
+  if ("sanitized" in obj && typeof obj.sanitized !== "boolean") return false;
+  return true;
+}
+
+function isValidChatStatusResponse(data: unknown): data is ChatStatusResponse {
+  if (data === null || typeof data !== "object") return false;
+  const obj = data as Record<string, unknown>;
+  const status = obj.status;
+  if (!isValidChatStatus(status)) return false;
+  return typeof obj.message === "string";
+}
+
 /**
  * POST /chat — submits a message and returns the initial response
  * (usually with status "PENDING" and a requestId for polling).
@@ -50,7 +78,13 @@ export async function postChat(message: string): Promise<ChatResponse> {
     throw new Error(`Chat POST failed: ${response.status}`);
   }
 
-  return (await response.json()) as ChatResponse;
+  const data = await response.json();
+
+  if (!isValidChatResponse(data)) {
+    throw new Error("Invalid chat response");
+  }
+
+  return data as ChatResponse;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +137,13 @@ export async function* pollChat(requestId: string): AsyncGenerator<ChatStatusRes
       throw new Error(`Chat poll failed: ${response.status}`);
     }
 
-    const update: ChatStatusResponse = await response.json();
+    const data = await response.json();
+
+    if (!isValidChatStatusResponse(data)) {
+      throw new Error("Invalid chat status response");
+    }
+
+    const update: ChatStatusResponse = data as ChatStatusResponse;
     yield update;
 
     if (TERMINAL_STATUSES.has(update.status)) {

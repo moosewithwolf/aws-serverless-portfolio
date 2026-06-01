@@ -10,7 +10,7 @@
 
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
-import { PollTimeoutError, pollChat } from "./chatApi";
+import { PollTimeoutError, pollChat, postChat } from "./chatApi";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -213,5 +213,98 @@ describe("pollChat", () => {
     const gen = pollChat("test-id");
     expect(gen[Symbol.asyncIterator]).toBeDefined();
     expect(typeof gen.next).toBe("function");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Runtime validation — postChat & pollChat
+// ---------------------------------------------------------------------------
+
+describe("postChat runtime validation", () => {
+  let fetchSpy: any;
+
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("rejects if PENDING response lacks requestId", async () => {
+    fetchSpy.mockResolvedValue(
+      mockResponse(true, 200, async () => ({
+        status: "PENDING",
+        // requestId is intentionally missing
+      })),
+    );
+
+    await expect(postChat("hello")).rejects.toThrow("Invalid chat response");
+  });
+
+  it("rejects if status is not PENDING/DONE/ERROR", async () => {
+    fetchSpy.mockResolvedValue(
+      mockResponse(true, 200, async () => ({
+        requestId: "abc",
+        status: "UNKNOWN" as unknown as "PENDING" | "DONE" | "ERROR",
+      })),
+    );
+
+    await expect(postChat("hello")).rejects.toThrow("Invalid chat response");
+  });
+});
+
+describe("pollChat runtime validation", () => {
+  let fetchSpy: any;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("rejects if response status is invalid", async () => {
+    fetchSpy.mockImplementationOnce(async () =>
+      mockResponse(true, 200, async () => ({
+        status: "UNKNOWN" as unknown as "PENDING" | "DONE" | "ERROR",
+        message: "bad",
+      })),
+    );
+
+    const gen = pollChat("req-invalid");
+    await expect(gen.next()).rejects.toThrow("Invalid chat status response");
+  });
+
+  it("rejects if response message is missing", async () => {
+    fetchSpy.mockImplementationOnce(async () =>
+      mockResponse(true, 200, async () => ({
+        status: "PENDING",
+      })),
+    );
+
+    const gen = pollChat("req-missing-message");
+    await expect(gen.next()).rejects.toThrow("Invalid chat status response");
+  });
+
+  it("accepts DONE with a string message and completes", async () => {
+    fetchSpy.mockImplementationOnce(async () =>
+      mockResponse(true, 200, async () => ({
+        status: "DONE",
+        message: "All done here.",
+      })),
+    );
+
+    const gen = pollChat("req-done");
+    const result = await gen.next();
+    expect(result.done).toBe(false);
+    expect(result.value.status).toBe("DONE");
+    expect(result.value.message).toBe("All done here.");
+
+    const done = await gen.next();
+    expect(done.done).toBe(true);
   });
 });

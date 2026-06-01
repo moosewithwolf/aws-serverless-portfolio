@@ -556,7 +556,7 @@ Expected: all pass.
 - Modify: `frontend/src/ChatConversation.tsx`
 - Modify: `frontend/src/GlobalChatWidget.test.tsx`
 
-- [ ] **Step 1: Assign failing API validation tests**
+- [x] **Step 1: Assign failing API validation tests**
 
 Prompt:
 
@@ -580,7 +580,7 @@ Expected result: new invalid-shape tests fail.
 Stop and report changed files and failing test names.
 ```
 
-- [ ] **Step 2: Assign API validation implementation**
+- [x] **Step 2: Assign API validation implementation**
 
 Prompt:
 
@@ -870,7 +870,7 @@ Codex must never ask Hermes to solve multiple tasks at once.
 - [x] `DONE` chat status preserves stored `sanitized`.
 - [x] Malformed request IDs are rejected before DynamoDB lookup.
 - [x] Frontend hash navigation and Back/Forward behavior are tested.
-- [ ] Chat API validates runtime JSON.
+- [x] Chat API validates runtime JSON.
 - [ ] Chat polling/request can be aborted on unmount.
 - [ ] Static frontend data is separated from `App.tsx`, if cleanup task ran.
 - [ ] Dead backend handler code is removed, if cleanup task ran.
