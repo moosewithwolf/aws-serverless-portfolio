@@ -307,4 +307,72 @@ describe("pollChat runtime validation", () => {
     const done = await gen.next();
     expect(done.done).toBe(true);
   });
+
+  it("passes AbortSignal to postChat fetch", async () => {
+    const controller = new AbortController();
+
+    fetchSpy.mockImplementation(async () => mockResponse(true, 200, async () => ({
+      requestId: "abc",
+      status: "PENDING",
+    })));
+
+    await postChat("hello", controller.signal);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/chat"),
+      expect.objectContaining({ signal: controller.signal }),
+    );
+  });
+
+  it("passes AbortSignal to pollChat fetch", async () => {
+    const controller = new AbortController();
+
+    fetchSpy.mockImplementationOnce(async () =>
+      mockResponse(true, 200, async () => ({
+        status: "DONE",
+        message: "complete",
+      })),
+    );
+
+    const gen = pollChat("req-signal", controller.signal);
+    await gen.next();
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/chat/req-signal"),
+      expect.objectContaining({ signal: controller.signal }),
+    );
+  });
+
+  it("stops pollChat when AbortSignal is triggered during polling", async () => {
+    const controller = new AbortController();
+
+    fetchSpy.mockImplementationOnce(async () =>
+      mockResponse(true, 200, async () => ({
+        status: "PENDING",
+        message: "",
+      })),
+    );
+
+    const gen = pollChat("req-abort", controller.signal);
+    const first = await gen.next();
+    expect(first.value.status).toBe("PENDING");
+
+    const second = gen.next();
+    controller.abort();
+    await Promise.resolve();
+
+    const result = await Promise.race([second, Promise.resolve("still-pending")]);
+    expect(result).toEqual({ done: true, value: undefined });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops pollChat when AbortSignal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(pollChat("req-early-abort", controller.signal).next()).resolves.toEqual({
+      done: true,
+      value: undefined,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });

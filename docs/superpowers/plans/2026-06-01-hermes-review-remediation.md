@@ -604,7 +604,7 @@ Expected result: pass.
 Stop and report changed files and test result.
 ```
 
-- [ ] **Step 3: Assign abort support tests**
+- [x] **Step 3: Assign abort support tests**
 
 Prompt:
 
@@ -628,7 +628,7 @@ Expected result: at least one new test fails.
 Stop and report changed files and failing test names.
 ```
 
-- [ ] **Step 4: Assign abort implementation**
+- [x] **Step 4: Assign abort implementation**
 
 Prompt:
 
@@ -654,7 +654,7 @@ Expected result: pass.
 Stop and report changed files and test result.
 ```
 
-- [ ] **Step 5: Codex verifies frontend chat**
+- [x] **Step 5: Codex verifies frontend chat**
 
 Run:
 
@@ -871,11 +871,11 @@ Codex must never ask Hermes to solve multiple tasks at once.
 - [x] Malformed request IDs are rejected before DynamoDB lookup.
 - [x] Frontend hash navigation and Back/Forward behavior are tested.
 - [x] Chat API validates runtime JSON.
-- [ ] Chat polling/request can be aborted on unmount.
+- [x] Chat polling/request can be aborted on unmount.
 - [ ] Static frontend data is separated from `App.tsx`, if cleanup task ran.
 - [ ] Dead backend handler code is removed, if cleanup task ran.
-- [ ] Frontend tests pass.
-- [ ] Frontend build passes.
+- [x] Frontend tests pass.
+- [x] Frontend build passes.
 - [ ] Local AI harness tests pass.
 - [ ] Backend unit tests pass.
 - [ ] `git diff --check` passes.

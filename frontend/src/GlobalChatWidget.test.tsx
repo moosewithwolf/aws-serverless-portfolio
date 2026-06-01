@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, afterEach } from "vitest";
 
@@ -113,5 +113,39 @@ describe("GlobalChatWidget", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("The local model timed out");
+  });
+
+  it("aborts an in-flight chat request on unmount without rendering an error", async () => {
+    const user = userEvent.setup();
+    let postSignal: AbortSignal | undefined;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation((url, init) => {
+      const target = String(url);
+
+      if (target.endsWith("/chat") && init?.method === "POST") {
+        postSignal = init.signal ?? undefined;
+        return new Promise<Response>((_, reject) => {
+          init.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Request aborted", "AbortError"));
+          });
+        });
+      }
+
+      return Promise.resolve(new Response("not found", { status: 404 }));
+    });
+
+    const { unmount } = render(
+      <GlobalChatWidget chatConfig={{ enabled: true, message: "Chat is online." }} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open AI chat" }));
+    await user.type(screen.getByPlaceholderText("Type a message..."), "Hello");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(postSignal).toBeDefined());
+    unmount();
+
+    expect(postSignal?.aborted).toBe(true);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

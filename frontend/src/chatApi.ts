@@ -67,11 +67,12 @@ function isValidChatStatusResponse(data: unknown): data is ChatStatusResponse {
  * POST /chat — submits a message and returns the initial response
  * (usually with status "PENDING" and a requestId for polling).
  */
-export async function postChat(message: string): Promise<ChatResponse> {
+export async function postChat(message: string, signal?: AbortSignal): Promise<ChatResponse> {
   const response = await fetch(`${apiBaseUrl}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),
+    signal,
   });
 
   if (!response.ok) {
@@ -120,18 +121,25 @@ export class PollTimeoutError extends Error {
  * }
  * ```
  */
-export async function* pollChat(requestId: string): AsyncGenerator<ChatStatusResponse> {
+export async function* pollChat(
+  requestId: string,
+  signal?: AbortSignal,
+): AsyncGenerator<ChatStatusResponse> {
   let attempt = 0;
 
   while (attempt < MAX_POLL_ATTEMPTS) {
+    if (signal?.aborted) {
+      return;
+    }
+
     attempt++;
 
-    const response = await fetch(`${apiBaseUrl}/chat/${requestId}`);
+    const response = await fetch(`${apiBaseUrl}/chat/${requestId}`, { signal });
 
     if (!response.ok) {
       // If the request is not found, it may still be processing
       if (response.status === 404) {
-        await delay(POLL_INTERVAL_MS);
+        await delay(POLL_INTERVAL_MS, signal);
         continue;
       }
       throw new Error(`Chat poll failed: ${response.status}`);
@@ -150,7 +158,7 @@ export async function* pollChat(requestId: string): AsyncGenerator<ChatStatusRes
       return;
     }
 
-    await delay(POLL_INTERVAL_MS);
+    await delay(POLL_INTERVAL_MS, signal);
   }
 
   throw new PollTimeoutError();
@@ -160,6 +168,20 @@ export async function* pollChat(requestId: string): AsyncGenerator<ChatStatusRes
 // Utilities
 // ---------------------------------------------------------------------------
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const timeoutId = window.setTimeout(cleanupAndResolve, ms);
+
+    function cleanupAndResolve() {
+      signal?.removeEventListener("abort", cleanupAndResolve);
+      window.clearTimeout(timeoutId);
+      resolve();
+    }
+
+    signal?.addEventListener("abort", cleanupAndResolve, { once: true });
+  });
 }

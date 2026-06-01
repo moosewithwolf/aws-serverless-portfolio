@@ -24,9 +24,14 @@ export function useChatSession(chatConfig: ChatConfig): ChatSession {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const typingTimer = useRef<number | null>(null);
+  const abortController = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
 
   useEffect(() => {
     return () => {
+      mounted.current = false;
+      abortController.current?.abort();
+
       if (typingTimer.current !== null) {
         window.clearInterval(typingTimer.current);
       }
@@ -71,15 +76,19 @@ export function useChatSession(chatConfig: ChatConfig): ChatSession {
     setLoading(true);
     setError(null);
 
+    abortController.current?.abort();
+    const controller = new AbortController();
+    abortController.current = controller;
+
     try {
-      const response: ChatResponse = await postChat(trimmed);
+      const response: ChatResponse = await postChat(trimmed, controller.signal);
 
       if (response.status === "DONE") {
         await appendAssistantMessage(response.message ?? "Processing complete.");
         return;
       }
 
-      for await (const update of pollChat(response.requestId)) {
+      for await (const update of pollChat(response.requestId, controller.signal)) {
         if (update.status === "DONE") {
           await appendAssistantMessage(update.message || "Processing complete.");
           break;
@@ -91,17 +100,31 @@ export function useChatSession(chatConfig: ChatConfig): ChatSession {
         }
       }
     } catch (err) {
+      if (controller.signal.aborted || isAbortError(err)) {
+        return;
+      }
+
       if (err instanceof PollTimeoutError) {
         setError("The local agent is offline or timed out. Please try again later.");
       } else {
         setError("Failed to send message. Please try again.");
       }
     } finally {
-      setLoading(false);
+      if (abortController.current === controller) {
+        abortController.current = null;
+      }
+
+      if (mounted.current) {
+        setLoading(false);
+      }
     }
   };
 
   return { messages, input, loading, error, setInput, sendMessage };
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 type ChatConversationProps = {
