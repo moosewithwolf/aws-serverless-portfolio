@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 
 import { PollTimeoutError, pollChat, postChat, type ChatResponse } from "./chatApi";
 import type { ChatConfig } from "./chatConfig";
 
-type ChatMessage = {
+export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
 };
@@ -18,8 +18,15 @@ export type ChatSession = {
   sendMessage: () => Promise<void>;
 };
 
-export function useChatSession(chatConfig: ChatConfig): ChatSession {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+type ChatSessionOptions = {
+  initialMessages?: ChatMessage[];
+  onMessagesChange?: (messages: ChatMessage[]) => void;
+  resetKey?: string;
+};
+
+export function useChatSession(chatConfig: ChatConfig, options: ChatSessionOptions = {}): ChatSession {
+  const { initialMessages = [], onMessagesChange, resetKey } = options;
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +44,18 @@ export function useChatSession(chatConfig: ChatConfig): ChatSession {
       }
     };
   }, []);
+
+  useEffect(() => {
+    setMessages(initialMessages);
+    setInput("");
+    setLoading(false);
+    setError(null);
+    abortController.current?.abort();
+  }, [resetKey]);
+
+  useEffect(() => {
+    onMessagesChange?.(messages);
+  }, [messages, onMessagesChange]);
 
   const appendAssistantMessage = (content: string) => {
     return new Promise<void>((resolve) => {
@@ -131,18 +150,22 @@ type ChatConversationProps = {
   chatConfig: ChatConfig;
   session: ChatSession;
   className?: string;
+  emptyContent?: ReactNode;
   emptyOnlineMessage?: string;
   modelLabel?: string;
   modelStatus?: "online" | "offline";
+  placeholder?: string;
 };
 
 export function ChatConversation({
   chatConfig,
   session,
   className = "",
+  emptyContent,
   emptyOnlineMessage = "No messages yet. Send a message to start the conversation!",
   modelLabel,
   modelStatus = "online",
+  placeholder = "Type a message...",
 }: ChatConversationProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -168,7 +191,7 @@ export function ChatConversation({
       <div className="chat-messages" aria-live="polite">
         {session.messages.length === 0 && (
           <div className="chat-empty">
-            <p>{chatConfig.enabled ? emptyOnlineMessage : chatConfig.message}</p>
+            {chatConfig.enabled ? emptyContent ?? <p>{emptyOnlineMessage}</p> : <p>{chatConfig.message}</p>}
           </div>
         )}
 
@@ -196,7 +219,7 @@ export function ChatConversation({
           value={session.input}
           onChange={(event) => session.setInput(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
+          placeholder={placeholder}
           disabled={session.loading || !chatConfig.enabled}
           rows={2}
         />
