@@ -457,6 +457,17 @@ main {
   background: rgba(255, 255, 255, 0.72);
   color: var(--primary);
   text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.cert-card:hover {
+  border-color: rgba(45, 61, 84, 0.16);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.cert-card:focus-visible {
+  outline: 1px solid rgba(45, 61, 84, 0.2);
+  outline-offset: 2px;
 }
 
 .cert-card img {
