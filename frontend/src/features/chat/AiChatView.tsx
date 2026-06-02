@@ -67,6 +67,14 @@ export function AiChatView({ chatConfig }: AiChatViewProps) {
   });
 
   const handleNewChat = () => {
+    const emptySession = sessions.find((storedSession) => storedSession.messages.length === 0);
+
+    if (emptySession) {
+      setActiveSessionId(emptySession.id);
+      writeStorage(ACTIVE_SESSION_STORAGE_KEY, emptySession.id);
+      return;
+    }
+
     const newSession = createStoredSession();
     const updatedSessions = [newSession, ...sessions];
     setSessions(updatedSessions);

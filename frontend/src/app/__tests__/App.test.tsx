@@ -232,6 +232,18 @@ describe("App", () => {
     expect(localStorage.getItem("portfolio-ai-chat-sessions")).toContain("Tell me about NoraHangul");
   });
 
+  it("does not pile up empty AI chat sessions when starting new chats", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    await user.click(screen.getByRole("button", { name: "New" }));
+    await user.click(screen.getByRole("button", { name: "New" }));
+    await user.click(screen.getByRole("button", { name: "New" }));
+
+    expect(screen.getAllByRole("button", { name: "New chat" })).toHaveLength(1);
+  });
+
   it("opens the AI Chat tab and sends a message", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
