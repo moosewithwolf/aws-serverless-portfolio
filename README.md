@@ -36,8 +36,13 @@ VITE_API_BASE_URL=https://api-id.execute-api.ca-central-1.amazonaws.com/Prod npm
 
 ## Deployment
 
-See `docs/deployment-v1.md`.
+The deployable backend Lambda sources live under `backend/`:
+
+- `backend/portfolio_api/` serves portfolio profile endpoints.
+- `backend/chat_api/` serves the async chat API endpoints.
+
+The static hosting stack lives separately in `infra/frontend-hosting.yaml`.
 
 ## V2
 
-The local AI chatbot is intentionally deferred. The planned design uses SQS, DynamoDB with TTL, and a MacBook agent that polls AWS outbound and calls local `llama.cpp`.
+The local AI worker lives under `local_ai/harness/local_agent/`. It polls SQS, calls the local model server, and writes responses back to DynamoDB. It is not packaged into the SAM Lambda artifact.

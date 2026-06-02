@@ -23,11 +23,11 @@ Resources:
   # GatewayLogs removed: the previous log group was hard-coded and not wired
   # to access logging. Body-level data tracing stays disabled for privacy.
 
-  # Local AI Function Logs — retention set to 14 days (Phase 5)
-  LocalAiFunctionLogs:
+  # Chat API Function Logs — retention set to 14 days (Phase 5)
+  ChatApiFunctionLogs:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${LocalAiFunction}"
+      LogGroupName: !Sub "/aws/lambda/${ChatApiFunction}"
       RetentionInDays: 14
 
   PortfolioApiFunctionLogs:
@@ -39,7 +39,7 @@ Resources:
   ChatRequestTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: chat-requests
+      TableName: !Sub "${AWS::StackName}-chat-requests"
       AttributeDefinitions:
         - AttributeName: requestId
           AttributeType: S
@@ -51,18 +51,27 @@ Resources:
         AttributeName: ttl
         Enabled: true
 
+  ChatDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${AWS::StackName}-chat-jobs-dlq"
+      MessageRetentionPeriod: 3600
+
   ChatQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: chat-jobs
+      QueueName: !Sub "${AWS::StackName}-chat-jobs"
       VisibilityTimeout: 300
-      MessageRetentionPeriod: 1209600
+      MessageRetentionPeriod: 3600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ChatDeadLetterQueue.Arn
+        maxReceiveCount: 3
 
-  LocalAiFunction:
+  ChatApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../local_ai/harness/
-      Handler: harness.app.lambda_handler
+      CodeUri: chat_api/
+      Handler: app.lambda_handler
       Runtime: python3.12
       Architectures:
         - x86_64
@@ -79,6 +88,7 @@ Resources:
               Action:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
+                - dynamodb:UpdateItem
               Resource: !GetAtt ChatRequestTable.Arn
             - Effect: Allow
               Action:
@@ -109,7 +119,7 @@ Resources:
   PortfolioApiFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: hello_world/
+      CodeUri: portfolio_api/
       Handler: app.lambda_handler
       Runtime: python3.12
       Architectures:
@@ -149,9 +159,9 @@ Outputs:
   PortfolioApiFunctionIamRole:
     Description: "Implicit IAM Role created for the Portfolio API function"
     Value: !GetAtt PortfolioApiFunctionRole.Arn
-  LocalAiFunction:
-    Description: "Local AI Chatbot Lambda Function ARN"
-    Value: !GetAtt LocalAiFunction.Arn
-  LocalAiFunctionIamRole:
-    Description: "Implicit IAM Role created for the Local AI function"
-    Value: !GetAtt LocalAiFunctionRole.Arn
+  ChatApiFunction:
+    Description: "Portfolio chat API Lambda Function ARN"
+    Value: !GetAtt ChatApiFunction.Arn
+  ChatApiFunctionIamRole:
+    Description: "Implicit IAM Role created for the chat API function"
+    Value: !GetAtt ChatApiFunctionRole.Arn

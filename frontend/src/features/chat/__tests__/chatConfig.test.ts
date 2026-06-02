@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { loadChatConfig } from "./chatConfig";
+import { loadChatConfig } from "../chatConfig";
 
 describe("loadChatConfig", () => {
   afterEach(() => {

@@ -1,4 +1,4 @@
-"""Lambda handler for the Local AI Chatbot harness.
+"""Lambda handler for the portfolio chat API.
 
 Routes incoming API Gateway events to the harness, applies safety
 validation, serialises responses with camelCase keys, and returns
@@ -14,15 +14,19 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import uuid
 from typing import Any
 
 import boto3
 
-from harness.contracts import ChatRequest, ChatResponse, ChatStatus, ChatStatusResponse
-from harness.prompt_builder import load_context
-from harness.safety import validate_input, validate_output
+try:
+    from .contracts import ChatRequest, ChatStatus
+    from .safety import validate_input
+except ImportError:  # pragma: no cover - used by AWS Lambda's flat handler import
+    from contracts import ChatRequest, ChatStatus
+    from safety import validate_input
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +177,7 @@ def _handle_chat_post(event: dict[str, Any]) -> dict[str, Any]:
     # Send SQS message
     sqs_ok = _send_chat_job(request_id, request.message)
     if not sqs_ok:
+        _store_error_status(request_id, "Service unavailable. Please try again later.")
         return _response(
             503, {
                 "status": "ERROR",
@@ -216,6 +221,40 @@ def _store_pending_request(request_id: str, message: str) -> bool:
         return False
 
 
+def _store_error_status(request_id: str, error_message: str) -> None:
+    """Update an existing PENDING item to ERROR status.
+
+    Called when SQS delivery fails after DynamoDB put_item succeeded,
+    so the pending record is not left indeterminate.
+    """
+    table_name = _chat_table_name()
+    if not table_name:
+        return
+    try:
+        ddb = _ddb_resource()
+        table = ddb.Table(table_name)
+        table.update_item(
+            Key={"requestId": request_id},
+            UpdateExpression="SET #st = :st, #msg = :msg, #san = :san, #ut = :ut",
+            ExpressionAttributeNames={
+                "#st": "status",
+                "#msg": "message",
+                "#san": "sanitized",
+                "#ut": "updatedAt",
+            },
+            ExpressionAttributeValues={
+                ":st": ChatStatus.ERROR.value,
+                ":msg": error_message,
+                ":san": False,
+                ":ut": _now_epoch(),
+            },
+            ConditionExpression="attribute_exists(requestId)",
+        )
+    except Exception:
+        # Non-fatal: the 503 already indicates failure; best-effort update.
+        pass
+
+
 def _send_chat_job(request_id: str, message: str) -> bool:
     """Send a chat job to the SQS queue.
 
@@ -244,14 +283,27 @@ def _send_chat_job(request_id: str, message: str) -> bool:
 # GET /chat/<requestId> — poll status from DynamoDB
 # ---------------------------------------------------------------------------
 
+# Pattern: exactly "chat_" followed by 32 lowercase hex characters (uuid4 hex)
+_VALID_REQUEST_ID_RE = re.compile(r"^chat_[0-9a-f]{32}$")
+
+
+def _is_valid_request_id(request_id: str) -> bool:
+    """Return True if request_id matches the expected format."""
+    return bool(_VALID_REQUEST_ID_RE.match(request_id))
+
+
 def _handle_chat_get(request_id: str) -> dict[str, Any]:
     """Poll endpoint — reads status from DynamoDB.
 
     Returns:
+    - 400 if the requestId format is invalid
     - 404 if request not found
     - 200 with PENDING/DONE/ERROR status
     - Never exposes internal errors
     """
+    if not _is_valid_request_id(request_id):
+        return _response(400, {"message": "Invalid requestId"})
+
     table_name = _chat_table_name()
     if not table_name:
         return _response(404, {"message": "Request not found"})
@@ -286,7 +338,7 @@ def _handle_chat_get(request_id: str) -> dict[str, Any]:
             "requestId": request_id,
             "status": ChatStatus.DONE.value,
             "message": item.get("message", ""),
-            "sanitized": True,
+            "sanitized": item.get("sanitized", False),
         }))
 
     if status == ChatStatus.ERROR.value:
@@ -307,27 +359,6 @@ def _handle_chat_get(request_id: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _build_prompt(message: str, context: str | None) -> str:
-    """Build the full prompt sent to the model.
-
-    Used by CLI harness (run_chat.py), not by Lambda POST /chat.
-    """
-    parts: list[str] = []
-    if context:
-        parts.append(f"Context:\n{context}")
-    parts.append(f"User: {message}")
-    return "\n\n".join(parts)
-
-
-def _model_to_dict(model: Any) -> dict[str, Any]:
-    """Convert a Pydantic model to a snake_case dict."""
-    if hasattr(model, "model_dump"):
-        return model.model_dump()  # type: ignore[attr-defined]
-    elif hasattr(model, "dict"):
-        return model.dict()
-    return {}
-
 
 def _to_camel_case(data: dict[str, Any]) -> dict[str, Any]:
     """Recursively convert snake_case keys to camelCase."""

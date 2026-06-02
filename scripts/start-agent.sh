@@ -22,6 +22,7 @@ CHAT_CONFIG_KEY="${CHAT_CONFIG_KEY:-chat-config.json}"
 CHAT_CONFIG_CACHE_CONTROL="${CHAT_CONFIG_CACHE_CONTROL:-no-cache, max-age=0}"
 COMPOSE_FILE="${COMPOSE_FILE:-${ROOT_DIR}/local_ai/harness/docker-compose.yml}"
 LOCAL_AI_BACKEND="${LOCAL_AI_BACKEND:-container}"
+CHAT_API_FUNCTION_NAME="${CHAT_API_FUNCTION_NAME:-${LOCAL_AI_FUNCTION_NAME:-}}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 require_var() {
@@ -73,7 +74,7 @@ update_lambda_chatbot_enabled() {
   merged_env="$(mktemp)"
 
   aws lambda get-function-configuration \
-    --function-name "${LOCAL_AI_FUNCTION_NAME}" \
+    --function-name "${CHAT_API_FUNCTION_NAME}" \
     --query 'Environment.Variables' \
     --output json \
     --profile "${AWS_PROFILE}" \
@@ -92,13 +93,13 @@ with open(target, "w", encoding="utf-8") as fh:
 PY
 
   aws lambda update-function-configuration \
-    --function-name "${LOCAL_AI_FUNCTION_NAME}" \
+    --function-name "${CHAT_API_FUNCTION_NAME}" \
     --environment "file://${merged_env}" \
     --profile "${AWS_PROFILE}" \
     --region "${AWS_REGION}" >/dev/null
 
   aws lambda wait function-updated \
-    --function-name "${LOCAL_AI_FUNCTION_NAME}" \
+    --function-name "${CHAT_API_FUNCTION_NAME}" \
     --profile "${AWS_PROFILE}" \
     --region "${AWS_REGION}"
 
@@ -108,7 +109,7 @@ PY
 require_var FRONTEND_BUCKET
 require_var CHAT_REQUEST_TABLE
 require_var CHAT_QUEUE_URL
-require_var LOCAL_AI_FUNCTION_NAME
+require_var CHAT_API_FUNCTION_NAME
 
 mkdir -p "${ROOT_DIR}/.agent"
 
@@ -136,7 +137,7 @@ cat > "${PLIST_FILE}" <<PLIST
     <string>${ROOT_DIR}/.venv/bin/python</string>
     <string>-u</string>
     <string>-m</string>
-    <string>harness.sqs_agent</string>
+    <string>local_agent.chat_worker.sqs_agent</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>

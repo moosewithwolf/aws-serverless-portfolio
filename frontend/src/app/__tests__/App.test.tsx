@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import App from "./App";
+import App from "../App";
 
 const profile = {
   name: "Shinseong Kim",
@@ -255,5 +255,72 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Resume" }));
     expect(screen.getByText("Computer Programming and Analysis")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Keep this draft")).toBeInTheDocument();
+  });
+
+  describe("navigation (Task 3A)", () => {
+    it('clicking "Explore Work" changes visible view to Projects and updates window.location.hash to #projects', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      await waitFor(() => expect(screen.getByText("API connected")).toBeInTheDocument());
+
+      await user.click(screen.getByRole("button", { name: "Explore Work" }));
+
+      expect(await screen.findByText("Featured Projects")).toBeInTheDocument();
+      expect(window.location.hash).toBe("#projects");
+    });
+
+    it("clicking nav buttons updates the URL hash and Home clears it", async () => {
+      const user = userEvent.setup();
+      window.history.replaceState(null, "", "/");
+
+      render(<App />);
+
+      await user.click(screen.getByRole("button", { name: "Projects" }));
+      expect(await screen.findByText("Featured Projects")).toBeInTheDocument();
+      expect(window.location.hash).toBe("#projects");
+
+      await user.click(screen.getByRole("button", { name: "Resume" }));
+      expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
+      expect(window.location.hash).toBe("#resume");
+
+      await user.click(screen.getByRole("button", { name: "AI Chat" }));
+      expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
+      expect(window.location.hash).toBe("#ai-chat");
+
+      await user.click(screen.getByRole("button", { name: "Home" }));
+
+      expect(screen.getByRole("heading", { name: "Shinseong Kim." })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Featured Projects" })).not.toBeInTheDocument();
+      expect(window.location.hash).toBe("");
+    });
+
+    it("browser Back and Forward via popstate update the active view to match the URL hash", async () => {
+      const user = userEvent.setup();
+      window.history.replaceState(null, "", "/#resume");
+
+      render(<App />);
+
+      expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Resume" })).toHaveClass("active");
+
+      // Navigate forward via nav click
+      await user.click(screen.getByRole("button", { name: "Projects" }));
+      expect(await screen.findByText("Featured Projects")).toBeInTheDocument();
+      expect(window.location.hash).toBe("#projects");
+
+      window.history.replaceState(null, "", "/#resume");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(await screen.findByRole("heading", { name: "Skills" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Resume" })).toHaveClass("active");
+
+      window.history.replaceState(null, "", "/#projects");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(await screen.findByText("Featured Projects")).toBeInTheDocument();
+      expect(window.location.hash).toBe("#projects");
+      expect(screen.getByRole("button", { name: "Projects" })).toHaveClass("active");
+    });
   });
 });

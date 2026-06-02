@@ -31,7 +31,7 @@ _RESPONSES: dict[str, str] = {
         "My portfolio backend runs on AWS Lambda with API Gateway. "
         "The frontend is a React SPA hosted on S3 behind CloudFront. "
         "The SAM template defines routes for `/health` and `/profile`. "
-        "This v2 adds a `LocalAiFunction` Lambda that processes chat messages"
+        "This v2 adds a `ChatApiFunction` Lambda that processes chat messages"
         " through a Python harness with safety validation."
     ),
     "certifications": (
@@ -91,6 +91,7 @@ _PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\boMLX\b|^\bpi\b|Hermes|shell|/bin/|eval\(|exec\(", re.IGNORECASE), "tool_runtime"),
     (re.compile(r"AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |DSA )?PRIVATE KEY|Bearer [a-zA-Z0-9_-]+"), "credential_request"),
     (re.compile(r"/etc/|\.ssh/|\.aws/|\$HOME|/home/", re.IGNORECASE), "private_info"),
+    (re.compile(r"\baws\b|serverless|lambda|api gateway|cloudfront|sqs|dynamodb|s3", re.IGNORECASE), "aws_architecture"),
 ]
 
 

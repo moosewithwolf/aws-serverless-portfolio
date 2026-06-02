@@ -1,7 +1,6 @@
 """Local AI Chatbot Harness — init module.
 
-Exposes the harness package entry point so the Lambda handler
-(`app.py`) can import submodules cleanly.
+Exposes shared backend selection helpers for the chat worker and CLI harness.
 
 Backend selection is controlled by the ``LOCAL_AI_BACKEND`` environment
 variable:
@@ -11,19 +10,19 @@ variable:
 
 Example::
 
-    LOCAL_AI_BACKEND=container python -m harness.run_chat "Hello"
+    LOCAL_AI_BACKEND=container python -m local_agent.run_chat "Hello"
 """
 
 import os
 
-from harness import contracts  # noqa: F401 — expose contract models
-from harness.mock_backend import MockModelBackend  # noqa: F401
-from harness.safety import validate_safety  # noqa: F401
-from harness.prompt_builder import load_context  # noqa: F401
+from local_agent.shared import contracts  # noqa: F401 — expose contract models
+from local_agent.chat_worker.mock_backend import MockModelBackend  # noqa: F401
+from local_agent.shared.safety import validate_safety  # noqa: F401
+from local_agent.chat_worker.prompt_builder import load_context  # noqa: F401
 
 # Lazy import of container backend to avoid importing requests at startup
 try:
-    from harness.container_model_client import (
+    from local_agent.chat_worker.container_model_client import (
         ContainerModelBackend,  # noqa: F401
     )
 except ImportError:  # requests not installed
