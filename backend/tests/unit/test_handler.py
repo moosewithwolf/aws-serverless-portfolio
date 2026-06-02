@@ -33,10 +33,13 @@ def test_profile_returns_summary_projects_resume_and_roadmap():
 
     assert response["statusCode"] == 200
     assert payload["name"] == "Shinseong Kim"
-    assert "Full-Stack Developer" in payload["headline"]
+    assert "Computer Programming student" in payload["headline"]
     assert [project["name"] for project in payload["projects"]] == [
         "NoraHangul",
         "Cloud Native Backend",
+        "GS Power Legacy Website",
+        "Lofi Nest",
+        "Pixels Legacy Media Website",
     ]
     assert "AWS Solutions Architect Associate" in payload["certifications"]
     assert payload["aiRoadmap"]["runtime"] == "llama.cpp"

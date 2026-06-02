@@ -20,9 +20,17 @@ export const awsCertifications = [
 ];
 
 export const projectLinks: Record<string, { demo?: string; github?: string }> = {
+  NoraHangul: {
+    demo: "https://norahangul.com",
+    github: "https://github.com/moosewithwolf/student-mangement-app-demo",
+  },
   "NoraHangul.com": {
     demo: "https://norahangul.com",
     github: "https://github.com/moosewithwolf/student-mangement-app-demo",
+  },
+  "Cloud Native Backend": {
+    demo: "https://shinseong.dev",
+    github: "https://github.com/moosewithwolf/aws-serverless-portfolio",
   },
   "Shinseong.dev": {
     demo: "https://shinseong.dev",

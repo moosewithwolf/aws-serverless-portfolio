@@ -24,10 +24,10 @@ Resources:
   # to access logging. Body-level data tracing stays disabled for privacy.
 
   # Chat API Function Logs — retention set to 14 days (Phase 5)
-  ChatApiFunctionLogs:
+  LocalAiFunctionLogs:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${ChatApiFunction}"
+      LogGroupName: !Sub "/aws/lambda/${LocalAiFunction}"
       RetentionInDays: 14
 
   PortfolioApiFunctionLogs:
@@ -39,7 +39,7 @@ Resources:
   ChatRequestTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AWS::StackName}-chat-requests"
+      TableName: "chat-requests"
       AttributeDefinitions:
         - AttributeName: requestId
           AttributeType: S
@@ -51,23 +51,14 @@ Resources:
         AttributeName: ttl
         Enabled: true
 
-  ChatDeadLetterQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "${AWS::StackName}-chat-jobs-dlq"
-      MessageRetentionPeriod: 3600
-
   ChatQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub "${AWS::StackName}-chat-jobs"
+      QueueName: "chat-jobs"
       VisibilityTimeout: 300
-      MessageRetentionPeriod: 3600
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt ChatDeadLetterQueue.Arn
-        maxReceiveCount: 3
+      MessageRetentionPeriod: 1209600
 
-  ChatApiFunction:
+  LocalAiFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: chat_api/
@@ -159,9 +150,9 @@ Outputs:
   PortfolioApiFunctionIamRole:
     Description: "Implicit IAM Role created for the Portfolio API function"
     Value: !GetAtt PortfolioApiFunctionRole.Arn
-  ChatApiFunction:
+  LocalAiFunction:
     Description: "Portfolio chat API Lambda Function ARN"
-    Value: !GetAtt ChatApiFunction.Arn
-  ChatApiFunctionIamRole:
+    Value: !GetAtt LocalAiFunction.Arn
+  LocalAiFunctionIamRole:
     Description: "Implicit IAM Role created for the chat API function"
-    Value: !GetAtt ChatApiFunctionRole.Arn
+    Value: !GetAtt LocalAiFunctionRole.Arn
