@@ -2,7 +2,7 @@
 
 Name: Shinseong Kim
 
-Headline: Full-Stack Developer & Cloud Architect
+Headline: A Computer Programming student building full-stack projects with React, AWS serverless, and local LLM AI.
 
 Summary: Computer Programming and Analysis student focused on AWS, serverless systems, and practical full-stack engineering.
 

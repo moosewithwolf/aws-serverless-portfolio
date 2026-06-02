@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -6,19 +6,35 @@ import App from "../App";
 
 const profile = {
   name: "Shinseong Kim",
-  headline: "Full-Stack Developer & Cloud Architect",
+  headline:
+    "A Computer Programming student building full-stack projects with React, AWS serverless, and local LLM AI.",
   summary: "AWS-focused portfolio profile.",
   email: "skim570@myseneca.ca",
   projects: [
     {
-      name: "NoraHangul",
-      tag: "Spring Boot / React / AWS",
+      name: "NoraHangul.com",
+      tag: "Spring Boot / React, AWS #Docker",
       description: "Student management system.",
     },
     {
-      name: "Cloud Native Backend",
-      tag: "AWS Lambda / SAM",
+      name: "Shinseong.dev",
+      tag: "AWS / Lambda / SAM",
       description: "Serverless portfolio backend.",
+    },
+    {
+      name: "GS Power Legacy Website",
+      tag: "HTML / CSS / JavaScript / Corporate Website",
+      description: "Legacy corporate website project.",
+    },
+    {
+      name: "Lofi Nest",
+      tag: "HTML / CSS / JavaScript / Music App",
+      description: "Legacy music app portfolio project.",
+    },
+    {
+      name: "Pixels Legacy Media Website",
+      tag: "HTML / CSS / JavaScript / Media Website",
+      description: "Legacy media website portfolio project.",
     },
   ],
   skills: ["Python", "TypeScript", "React", "AWS"],
@@ -59,25 +75,65 @@ describe("App", () => {
   it("renders the portfolio shell and loads profile data from the API", async () => {
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "Shinseong Kim." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Hi, I'm Shinseong Kim." })).toBeInTheDocument();
     expect(await screen.findByText("API connected")).toBeInTheDocument();
     expect(screen.queryByText("AWS Certified Solutions Architect Associate")).not.toBeInTheDocument();
   });
 
   it("switches between Projects, Resume, and AI Chat tabs", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    const { container } = render(<App />);
 
     await user.click(screen.getByRole("button", { name: "Projects" }));
-    expect(await screen.findByText("NoraHangul")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "NoraHangul demo" })).toHaveAttribute(
-      "href",
-      "https://github.com/moosewithwolf/Nora_Project#readme",
+    expect(await screen.findByRole("heading", { name: "NoraHangul.com" })).toBeInTheDocument();
+    expect(container.querySelector(".project-img")).not.toBeInTheDocument();
+    expect(container.querySelector(".projects-grid")).toBeInTheDocument();
+    expect(screen.queryByText("Spring Boot / React, AWS #Docker")).not.toBeInTheDocument();
+    const awsFilter = screen.getByRole("button", { name: "#AWS" });
+    const noraCard = screen.getByRole("article", { name: "NoraHangul.com" });
+    const cloudCard = screen.getByRole("article", { name: "Shinseong.dev" });
+    expect(screen.getByRole("button", { name: "#Spring Boot" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "#React" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "#Docker" })).toBeInTheDocument();
+    expect(within(noraCard).getByText("Spring Boot")).toBeInTheDocument();
+    expect(within(noraCard).getByText("React")).toBeInTheDocument();
+    expect(within(noraCard).getByText("Docker")).toBeInTheDocument();
+    expect(awsFilter).toHaveStyle(
+      within(noraCard).getByText("AWS").getAttribute("style") ?? "",
     );
-    expect(screen.getByRole("link", { name: "NoraHangul GitHub" })).toHaveAttribute(
-      "href",
-      "https://github.com/moosewithwolf/Nora_Project",
+    expect(awsFilter).toHaveStyle(
+      within(cloudCard).getByText("AWS").getAttribute("style") ?? "",
     );
+    await user.click(screen.getByRole("button", { name: "#React" }));
+    expect(screen.getByRole("heading", { name: "NoraHangul.com" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Shinseong.dev" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByRole("heading", { name: "Shinseong.dev" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "NoraHangul.com demo" })).toHaveAttribute(
+      "href",
+      "https://norahangul.com",
+    );
+    expect(screen.getByRole("link", { name: "NoraHangul.com GitHub" })).toHaveAttribute(
+      "href",
+      "https://github.com/moosewithwolf/student-mangement-app-demo",
+    );
+    expect(screen.getByRole("link", { name: "GS Power Legacy Website demo" })).toHaveAttribute(
+      "href",
+      "https://legacy-corporate-portfolio.vercel.app/",
+    );
+    expect(screen.queryByRole("link", { name: "GS Power Legacy Website GitHub" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Lofi Nest demo" })).toHaveAttribute(
+      "href",
+      "https://legacy-music-app-portfolio.vercel.app/",
+    );
+    expect(screen.queryByRole("link", { name: "Lofi Nest GitHub" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Pixels Legacy Media Website demo" })).toHaveAttribute(
+      "href",
+      "https://legacy-media-portfolio.vercel.app/",
+    );
+    expect(screen.queryByRole("link", { name: "Pixels Legacy Media Website GitHub" })).not.toBeInTheDocument();
+    expect(screen.queryByText("D")).not.toBeInTheDocument();
+    expect(screen.queryByText("GH")).not.toBeInTheDocument();
     expect(window.location.hash).toBe("#projects");
 
     await user.click(screen.getByRole("button", { name: "Resume" }));
@@ -87,11 +143,15 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Certifications" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Volunteer Experience" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Work Experience" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "AWS Certified Developer Associate" })).toHaveAttribute(
-      "href",
-      "https://www.credly.com/earner/earned/badge/134705ce-abad-4781-aa66-7024675ec676",
+    expect(document.querySelector('[data-share-badge-id="134705ce-abad-4781-aa66-7024675ec676"]')).toHaveAttribute(
+      "data-share-badge-host",
+      "https://www.credly.com",
     );
-    expect(screen.getByText("May 2026")).toBeInTheDocument();
+    expect(document.querySelector('[data-share-badge-id="64c563c4-ad51-47b7-ade7-ba18267549c1"]')).toHaveAttribute(
+      "data-iframe-height",
+      "270",
+    );
+    expect(document.querySelector('script[src="https://cdn.credly.com/assets/utilities/embed.js"]')).toBeInTheDocument();
     expect(screen.getByText("Executive of CodeXperts")).toBeInTheDocument();
     expect(screen.getByText("Housekeeping Supervisor")).toBeInTheDocument();
     expect(screen.getByText("Customs Specialist")).toBeInTheDocument();
@@ -249,7 +309,7 @@ describe("App", () => {
     await user.type(screen.getByPlaceholderText("Type a message..."), "Keep this draft");
 
     await user.click(screen.getByRole("button", { name: "Projects" }));
-    expect(await screen.findByText("NoraHangul")).toBeInTheDocument();
+    expect(await screen.findByText("NoraHangul.com")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Keep this draft")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Resume" }));
@@ -290,7 +350,7 @@ describe("App", () => {
 
       await user.click(screen.getByRole("button", { name: "Home" }));
 
-      expect(screen.getByRole("heading", { name: "Shinseong Kim." })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Hi, I'm Shinseong Kim." })).toBeInTheDocument();
       expect(screen.queryByRole("heading", { name: "Featured Projects" })).not.toBeInTheDocument();
       expect(window.location.hash).toBe("");
     });
