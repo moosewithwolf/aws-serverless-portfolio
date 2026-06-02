@@ -43,14 +43,18 @@ export function ResumeView({ profile }: ResumeViewProps) {
             <div className="cert-grid">
               {awsCertifications.map((certification) => (
                 <a
-                  className="cert-link"
+                  aria-label={certification.name}
+                  className="cert-card"
                   href={certification.href}
                   key={certification.name}
                   rel="noreferrer"
                   target="_blank"
                 >
-                  <strong>{certification.name}</strong>
-                  <span>{certification.issued}</span>
+                  <img alt="" src={certification.image} />
+                  <div className="cert-card-main">
+                    <strong>{certification.name}</strong>
+                  </div>
+                  <span className="date">{certification.issued}</span>
                 </a>
               ))}
             </div>

@@ -433,7 +433,8 @@ main {
 }
 
 .cert-grid {
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .skill-tag {
@@ -445,35 +446,32 @@ main {
   font-weight: 500;
 }
 
-.cert-link {
-  display: inline-flex;
-  min-width: min(260px, 100%);
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px 16px;
+.cert-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: #fff;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
   color: var(--primary);
   text-decoration: none;
-  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
-.cert-link:hover {
-  border-color: rgba(45, 61, 84, 0.22);
-  box-shadow: 0 10px 24px rgba(80, 98, 130, 0.1);
-  transform: translateY(-1px);
+.cert-card img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 }
 
-.cert-link strong {
-  font-size: 0.9rem;
-  line-height: 1.35;
+.cert-card-main {
+  min-width: 0;
+  flex: 1;
 }
 
-.cert-link span {
-  color: var(--secondary);
-  font-size: 0.82rem;
-  font-weight: 600;
+.cert-card strong {
+  display: block;
 }
 
 .resume-list {
