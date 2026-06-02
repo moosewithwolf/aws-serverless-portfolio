@@ -11,6 +11,7 @@ export function NavButton({ label, view, activeView, setActiveView }: NavButtonP
   return (
     <button
       className={`nav-btn ${activeView === view ? "active" : ""}`}
+      data-view={view}
       type="button"
       onClick={() => {
         setActiveView(view);

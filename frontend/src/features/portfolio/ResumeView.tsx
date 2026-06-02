@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 import type { Profile } from "../../shared/api/portfolioApi";
 import { awsCertifications } from "../../shared/data/portfolioData";
 
@@ -44,11 +42,20 @@ export function ResumeView({ profile }: ResumeViewProps) {
             <h3>Certifications</h3>
             <div className="cert-grid">
               {awsCertifications.map((certification) => (
-                <CredlyBadge
-                  badgeId={certification.badgeId}
+                <a
+                  aria-label={certification.name}
+                  className="cert-card"
+                  href={certification.href}
                   key={certification.name}
-                  label={certification.name}
-                />
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <img alt="" src={certification.image} />
+                  <div className="cert-card-main">
+                    <strong>{certification.name}</strong>
+                  </div>
+                  <span className="date">{certification.issued}</span>
+                </a>
               ))}
             </div>
           </div>
@@ -99,36 +106,5 @@ export function ResumeView({ profile }: ResumeViewProps) {
         </div>
       </div>
     </section>
-  );
-}
-
-type CredlyBadgeProps = {
-  badgeId: string;
-  label: string;
-};
-
-function CredlyBadge({ badgeId, label }: CredlyBadgeProps) {
-  useEffect(() => {
-    const scriptSrc = "https://cdn.credly.com/assets/utilities/embed.js";
-    if (document.querySelector(`script[src="${scriptSrc}"]`)) {
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = scriptSrc;
-    script.type = "text/javascript";
-    document.body.appendChild(script);
-  }, []);
-
-  return (
-    <div className="credly-badge" aria-label={label}>
-      <div
-        data-iframe-height="270"
-        data-iframe-width="150"
-        data-share-badge-host="https://www.credly.com"
-        data-share-badge-id={badgeId}
-      />
-    </div>
   );
 }

@@ -55,6 +55,14 @@ const profile = {
 describe("App", () => {
   beforeEach(() => {
     window.history.replaceState(null, "", "/");
+    const storage = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      clear: () => storage.clear(),
+      getItem: (key: string) => storage.get(key) ?? null,
+      removeItem: (key: string) => storage.delete(key),
+      setItem: (key: string, value: string) => storage.set(key, value),
+    });
+    localStorage.clear();
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
@@ -143,22 +151,25 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Certifications" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Volunteer Experience" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Work Experience" })).toBeInTheDocument();
-    expect(document.querySelector('[data-share-badge-id="134705ce-abad-4781-aa66-7024675ec676"]')).toHaveAttribute(
-      "data-share-badge-host",
-      "https://www.credly.com",
+    expect(screen.getByRole("link", { name: /AWS Certified Developer Associate/ })).toHaveAttribute(
+      "href",
+      "https://www.credly.com/badges/134705ce-abad-4781-aa66-7024675ec676/public_url",
     );
-    expect(document.querySelector('[data-share-badge-id="64c563c4-ad51-47b7-ade7-ba18267549c1"]')).toHaveAttribute(
-      "data-iframe-height",
-      "270",
+    expect(screen.getByRole("link", { name: /AWS Certified Solutions Architect Associate/ })).toHaveAttribute(
+      "href",
+      "https://www.credly.com/badges/64c563c4-ad51-47b7-ade7-ba18267549c1/public_url",
     );
-    expect(document.querySelector('script[src="https://cdn.credly.com/assets/utilities/embed.js"]')).toBeInTheDocument();
+    expect(document.querySelector("[data-share-badge-id]")).not.toBeInTheDocument();
+    expect(document.querySelector('script[src="https://cdn.credly.com/assets/utilities/embed.js"]')).not.toBeInTheDocument();
     expect(screen.getByText("Executive of CodeXperts")).toBeInTheDocument();
     expect(screen.getByText("Housekeeping Supervisor")).toBeInTheDocument();
     expect(screen.getByText("Customs Specialist")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "AI Chat" }));
-    expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
-    expect(screen.getByText("Ask about Shinseong's projects, skills, or AWS work.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Portfolio AI" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Chat history" })).toBeInTheDocument();
+    expect(screen.getByText("Gemma 2B IT Q4_K_M")).toBeInTheDocument();
+    expect(screen.queryByText("Local model: Gemma 2B IT Q4_K_M")).not.toBeInTheDocument();
     expect(window.location.hash).toBe("#ai-chat");
   });
 
@@ -182,7 +193,57 @@ describe("App", () => {
 
     expect(screen.queryByLabelText("Floating AI chat")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open AI chat" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Portfolio AI" })).toBeInTheDocument();
+  });
+
+  it("stores full-page AI chat history in localStorage", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/chat-config.json")) {
+          return new Response(JSON.stringify({ enabled: true }));
+        }
+        if (url.endsWith("/health")) {
+          return new Response(JSON.stringify({ status: "ok", service: "portfolio-api" }));
+        }
+        if (url.endsWith("/profile")) {
+          return new Response(JSON.stringify(profile));
+        }
+        if (url.endsWith("/chat")) {
+          return new Response(JSON.stringify({ requestId: "abc123", status: "DONE", message: "Portfolio answer." }));
+        }
+        return new Response("Not found", { status: 404 });
+      }),
+    );
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    const conversation = screen.getByLabelText("Portfolio AI conversation");
+    await user.type(
+      within(conversation).getByPlaceholderText("Ask about projects, AWS, backend work..."),
+      "Tell me about NoraHangul",
+    );
+    await user.click(within(conversation).getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(conversation.textContent).toContain("Portfolio answer.");
+    });
+    expect(screen.getByRole("button", { name: "Tell me about NoraHangul" })).toBeInTheDocument();
+    expect(localStorage.getItem("portfolio-ai-chat-sessions")).toContain("Tell me about NoraHangul");
+  });
+
+  it("does not pile up empty AI chat sessions when starting new chats", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    await user.click(screen.getByRole("button", { name: "New" }));
+    await user.click(screen.getByRole("button", { name: "New" }));
+    await user.click(screen.getByRole("button", { name: "New" }));
+
+    expect(screen.getAllByRole("button", { name: "New chat" })).toHaveLength(1);
   });
 
   it("opens the AI Chat tab and sends a message", async () => {
@@ -345,7 +406,7 @@ describe("App", () => {
       expect(window.location.hash).toBe("#resume");
 
       await user.click(screen.getByRole("button", { name: "AI Chat" }));
-      expect(screen.getByRole("heading", { name: "AI Chat" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Portfolio AI" })).toBeInTheDocument();
       expect(window.location.hash).toBe("#ai-chat");
 
       await user.click(screen.getByRole("button", { name: "Home" }));
