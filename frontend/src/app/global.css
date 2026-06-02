@@ -472,6 +472,12 @@ main {
 
 .cert-card strong {
   display: block;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.cert-card .date {
+  font-size: 0.76rem;
 }
 
 .resume-list {
