@@ -151,15 +151,16 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Certifications" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Volunteer Experience" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Work Experience" })).toBeInTheDocument();
-    expect(document.querySelector('[data-share-badge-id="134705ce-abad-4781-aa66-7024675ec676"]')).toHaveAttribute(
-      "data-share-badge-host",
-      "https://www.credly.com",
+    expect(screen.getByRole("link", { name: /AWS Certified Developer Associate/ })).toHaveAttribute(
+      "href",
+      "https://www.credly.com/earner/earned/badge/134705ce-abad-4781-aa66-7024675ec676",
     );
-    expect(document.querySelector('[data-share-badge-id="64c563c4-ad51-47b7-ade7-ba18267549c1"]')).toHaveAttribute(
-      "data-iframe-height",
-      "270",
+    expect(screen.getByRole("link", { name: /AWS Certified Solutions Architect Associate/ })).toHaveAttribute(
+      "href",
+      "https://www.credly.com/earner/earned/badge/64c563c4-ad51-47b7-ade7-ba18267549c1",
     );
-    expect(document.querySelector('script[src="https://cdn.credly.com/assets/utilities/embed.js"]')).toBeInTheDocument();
+    expect(document.querySelector("[data-share-badge-id]")).not.toBeInTheDocument();
+    expect(document.querySelector('script[src="https://cdn.credly.com/assets/utilities/embed.js"]')).not.toBeInTheDocument();
     expect(screen.getByText("Executive of CodeXperts")).toBeInTheDocument();
     expect(screen.getByText("Housekeeping Supervisor")).toBeInTheDocument();
     expect(screen.getByText("Customs Specialist")).toBeInTheDocument();

@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 import type { Profile } from "../../shared/api/portfolioApi";
 import { awsCertifications } from "../../shared/data/portfolioData";
 
@@ -44,11 +42,16 @@ export function ResumeView({ profile }: ResumeViewProps) {
             <h3>Certifications</h3>
             <div className="cert-grid">
               {awsCertifications.map((certification) => (
-                <CredlyBadge
-                  badgeId={certification.badgeId}
+                <a
+                  className="cert-link"
+                  href={certification.href}
                   key={certification.name}
-                  label={certification.name}
-                />
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <strong>{certification.name}</strong>
+                  <span>{certification.issued}</span>
+                </a>
               ))}
             </div>
           </div>
@@ -99,36 +102,5 @@ export function ResumeView({ profile }: ResumeViewProps) {
         </div>
       </div>
     </section>
-  );
-}
-
-type CredlyBadgeProps = {
-  badgeId: string;
-  label: string;
-};
-
-function CredlyBadge({ badgeId, label }: CredlyBadgeProps) {
-  useEffect(() => {
-    const scriptSrc = "https://cdn.credly.com/assets/utilities/embed.js";
-    if (document.querySelector(`script[src="${scriptSrc}"]`)) {
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = scriptSrc;
-    script.type = "text/javascript";
-    document.body.appendChild(script);
-  }, []);
-
-  return (
-    <div className="credly-badge" aria-label={label}>
-      <div
-        data-iframe-height="270"
-        data-iframe-width="150"
-        data-share-badge-host="https://www.credly.com"
-        data-share-badge-id={badgeId}
-      />
-    </div>
   );
 }

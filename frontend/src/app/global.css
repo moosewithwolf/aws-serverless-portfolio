@@ -445,17 +445,35 @@ main {
   font-weight: 500;
 }
 
-.credly-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 270px;
-  width: 150px;
-  padding: 0;
+.cert-link {
+  display: inline-flex;
+  min-width: min(260px, 100%);
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
-  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--primary);
+  text-decoration: none;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.cert-link:hover {
+  border-color: rgba(45, 61, 84, 0.22);
+  box-shadow: 0 10px 24px rgba(80, 98, 130, 0.1);
+  transform: translateY(-1px);
+}
+
+.cert-link strong {
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.cert-link span {
+  color: var(--secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .resume-list {
