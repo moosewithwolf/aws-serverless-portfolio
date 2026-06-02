@@ -7,14 +7,14 @@ export const awsCertifications = [
     name: "AWS Certified Developer Associate",
     issued: "May 2026",
     badgeId: "134705ce-abad-4781-aa66-7024675ec676",
-    href: "https://www.credly.com/earner/earned/badge/134705ce-abad-4781-aa66-7024675ec676",
+    href: "https://www.credly.com/badges/134705ce-abad-4781-aa66-7024675ec676/public_url",
     image: "https://images.credly.com/images/b9feab85-1a43-4f6c-99a5-631b88d5461b/image.png",
   },
   {
     name: "AWS Certified Solutions Architect Associate",
     issued: "Feb 2026",
     badgeId: "64c563c4-ad51-47b7-ade7-ba18267549c1",
-    href: "https://www.credly.com/earner/earned/badge/64c563c4-ad51-47b7-ade7-ba18267549c1",
+    href: "https://www.credly.com/badges/64c563c4-ad51-47b7-ade7-ba18267549c1/public_url",
     image: "https://images.credly.com/images/0e284c3f-5164-4b21-8660-0d84737941bc/image.png",
   },
 ];

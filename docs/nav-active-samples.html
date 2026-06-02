@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Navigation Active State Samples</title>
+    <style>
+      :root {
+        --primary: #111;
+        --secondary: #666;
+        --accent: #0071e3;
+        --glass: rgba(255, 255, 255, 0.7);
+        --border: rgba(255, 255, 255, 0.4);
+        --soft-line: rgba(17, 17, 17, 0.1);
+        --shadow: rgba(80, 98, 130, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 18% 82%, rgba(255, 209, 255, 0.72), transparent 34%),
+          radial-gradient(circle at 82% 12%, rgba(165, 199, 255, 0.78), transparent 35%),
+          #f8faff;
+        color: var(--primary);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      main {
+        width: min(1040px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 56px 0 72px;
+      }
+
+      header {
+        max-width: 720px;
+        margin-bottom: 30px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.9rem;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+        color: var(--secondary);
+        line-height: 1.55;
+      }
+
+      .sample-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .sample {
+        min-height: 178px;
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.46);
+        box-shadow: 0 24px 70px rgba(80, 98, 130, 0.12);
+        backdrop-filter: saturate(180%) blur(22px);
+      }
+
+      .sample h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+        letter-spacing: 0;
+      }
+
+      .sample p {
+        min-height: 44px;
+        margin-bottom: 18px;
+        font-size: 0.88rem;
+      }
+
+      .nav-demo {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        max-width: 100%;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--glass);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        backdrop-filter: saturate(180%) blur(20px);
+      }
+
+      .nav-demo button {
+        min-width: 0;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--secondary);
+        cursor: default;
+        font: inherit;
+        font-size: 0.87rem;
+        font-weight: 550;
+        padding: 10px 16px;
+        white-space: nowrap;
+      }
+
+      .option-1 .active {
+        background: #111;
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(17, 17, 17, 0.16);
+      }
+
+      .option-2 .active {
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.42);
+        color: #111;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.86),
+          0 12px 32px rgba(80, 98, 130, 0.14);
+        backdrop-filter: blur(16px);
+      }
+
+      .option-3 .nav-demo {
+        background: rgba(17, 17, 17, 0.78);
+        border-color: rgba(255, 255, 255, 0.16);
+      }
+
+      .option-3 .nav-demo button {
+        color: rgba(255, 255, 255, 0.62);
+      }
+
+      .option-3 .active {
+        background: #fff;
+        color: #111;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+      }
+
+      .option-4 .active {
+        position: relative;
+        color: #111;
+        background: rgba(255, 255, 255, 0.36);
+      }
+
+      .option-4 .active::after {
+        position: absolute;
+        right: 15px;
+        bottom: 6px;
+        left: 15px;
+        height: 2px;
+        border-radius: 999px;
+        background: #111;
+        content: "";
+      }
+
+      .option-5 .active {
+        border: 1px solid rgba(0, 113, 227, 0.18);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(231, 241, 255, 0.78));
+        color: #0c3f78;
+        box-shadow: 0 10px 26px rgba(0, 113, 227, 0.12);
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding-top: 32px;
+        }
+
+        .sample-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .nav-demo {
+          overflow-x: auto;
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Navigation Active State Samples</h1>
+        <p>Five active-tab treatments for the current soft glass portfolio navigation. These are mockups only.</p>
+      </header>
+
+      <section class="sample-grid" aria-label="Navigation active state samples">
+        <article class="sample option-1">
+          <h2>1. Black Active Pill</h2>
+          <p>Highest contrast. Clear black background with white text, still compact enough for the current nav.</p>
+          <nav class="nav-demo" aria-label="Sample 1">
+            <button>Home</button>
+            <button class="active">Projects</button>
+            <button>Resume</button>
+            <button>AI Chat</button>
+          </nav>
+        </article>
+
+        <article class="sample option-2">
+          <h2>2. Raised Glass Pill</h2>
+          <p>Most aligned with the existing glass UI. Active state is brighter, elevated, and easier to see.</p>
+          <nav class="nav-demo" aria-label="Sample 2">
+            <button>Home</button>
+            <button class="active">Projects</button>
+            <button>Resume</button>
+            <button>AI Chat</button>
+          </nav>
+        </article>
+
+        <article class="sample option-3">
+          <h2>3. Dark Glass Bar</h2>
+          <p>Black and white treatment. Strong visibility, but changes the nav personality more dramatically.</p>
+          <nav class="nav-demo" aria-label="Sample 3">
+            <button>Home</button>
+            <button class="active">Projects</button>
+            <button>Resume</button>
+            <button>AI Chat</button>
+          </nav>
+        </article>
+
+        <article class="sample option-4">
+          <h2>4. Glass With Ink Underline</h2>
+          <p>Quiet and portfolio-like. Keeps the airy nav while giving the active item a visible anchor.</p>
+          <nav class="nav-demo" aria-label="Sample 4">
+            <button>Home</button>
+            <button class="active">Projects</button>
+            <button>Resume</button>
+            <button>AI Chat</button>
+          </nav>
+        </article>
+
+        <article class="sample option-5">
+          <h2>5. Soft Accent Pill</h2>
+          <p>Uses a restrained blue tint from the site palette. Visible without feeling too heavy.</p>
+          <nav class="nav-demo" aria-label="Sample 5">
+            <button>Home</button>
+            <button class="active">Projects</button>
+            <button>Resume</button>
+            <button>AI Chat</button>
+          </nav>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

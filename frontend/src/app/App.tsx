@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { ApiStatus } from "./components/ApiStatus";
 import { BackgroundWorld } from "./components/BackgroundWorld";
@@ -24,6 +25,8 @@ function App() {
     enabled: false,
     message: "Checking chat availability.",
   });
+  const navRef = useRef<HTMLElement | null>(null);
+  const [navIndicator, setNavIndicator] = useState({ left: 8, width: 0 });
 
   useEffect(() => {
     let isMounted = true;
@@ -83,10 +86,42 @@ function App() {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    const updateNavIndicator = () => {
+      const nav = navRef.current;
+      const activeButton = nav?.querySelector<HTMLButtonElement>(`[data-view="${activeView}"]`);
+
+      if (!nav || !activeButton) {
+        return;
+      }
+
+      const navRect = nav.getBoundingClientRect();
+      const buttonRect = activeButton.getBoundingClientRect();
+      setNavIndicator({
+        left: buttonRect.left - navRect.left,
+        width: buttonRect.width,
+      });
+    };
+
+    updateNavIndicator();
+    window.addEventListener("resize", updateNavIndicator);
+    return () => {
+      window.removeEventListener("resize", updateNavIndicator);
+    };
+  }, [activeView]);
+
   return (
     <>
       <BackgroundWorld />
-      <nav aria-label="Portfolio sections">
+      <nav
+        aria-label="Portfolio sections"
+        ref={navRef}
+        style={{
+          "--nav-indicator-left": `${navIndicator.left}px`,
+          "--nav-indicator-width": `${navIndicator.width}px`,
+        } as CSSProperties}
+      >
+        <span className="nav-active-indicator" aria-hidden="true" />
         <NavButton label="Home" view="home" activeView={activeView} setActiveView={setActiveViewFromNav} />
         <NavButton
           label="Projects"

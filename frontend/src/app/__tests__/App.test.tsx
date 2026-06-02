@@ -153,11 +153,11 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Work Experience" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /AWS Certified Developer Associate/ })).toHaveAttribute(
       "href",
-      "https://www.credly.com/earner/earned/badge/134705ce-abad-4781-aa66-7024675ec676",
+      "https://www.credly.com/badges/134705ce-abad-4781-aa66-7024675ec676/public_url",
     );
     expect(screen.getByRole("link", { name: /AWS Certified Solutions Architect Associate/ })).toHaveAttribute(
       "href",
-      "https://www.credly.com/earner/earned/badge/64c563c4-ad51-47b7-ade7-ba18267549c1",
+      "https://www.credly.com/badges/64c563c4-ad51-47b7-ade7-ba18267549c1/public_url",
     );
     expect(document.querySelector("[data-share-badge-id]")).not.toBeInTheDocument();
     expect(document.querySelector('script[src="https://cdn.credly.com/assets/utilities/embed.js"]')).not.toBeInTheDocument();
