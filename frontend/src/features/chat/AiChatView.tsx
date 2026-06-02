@@ -141,8 +141,6 @@ export function AiChatView({ chatConfig }: AiChatViewProps) {
                 </div>
               </div>
             }
-            modelLabel={`Local model: ${localModelName}`}
-            modelStatus={chatConfig.enabled ? "online" : "offline"}
             placeholder="Ask about projects, AWS, backend work..."
           />
         </div>

@@ -168,6 +168,7 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Portfolio AI" })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "Chat history" })).toBeInTheDocument();
     expect(screen.getByText("Gemma 2B IT Q4_K_M")).toBeInTheDocument();
+    expect(screen.queryByText("Local model: Gemma 2B IT Q4_K_M")).not.toBeInTheDocument();
     expect(window.location.hash).toBe("#ai-chat");
   });
 
