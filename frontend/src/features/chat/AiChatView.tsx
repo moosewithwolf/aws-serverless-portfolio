@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 
 import { ChatConversation, useChatSession, type ChatMessage } from "./ChatConversation";
 import type { ChatConfig } from "./chatConfig";
@@ -24,10 +25,16 @@ const samplePrompts = [
   "Tell me about Shinseong's AWS work",
   "Summarize the backend experience",
 ];
+const followUpPrompts = [
+  "Which project shows AWS best?",
+  "Show the tech stack highlights",
+  "Summarize the resume highlights",
+];
 
 export function AiChatView({ chatConfig }: AiChatViewProps) {
   const [sessions, setSessions] = useState<StoredChatSession[]>(() => loadStoredSessions());
   const [activeSessionId, setActiveSessionId] = useState(() => readStorage(ACTIVE_SESSION_STORAGE_KEY) ?? undefined);
+  const displayModelName = chatConfig.modelName ?? localModelName;
 
   const activeSession = useMemo(
     () => sessions.find((storedSession) => storedSession.id === activeSessionId) ?? sessions[0],
@@ -88,15 +95,29 @@ export function AiChatView({ chatConfig }: AiChatViewProps) {
     writeStorage(ACTIVE_SESSION_STORAGE_KEY, sessionId);
   };
 
+  const handleClearHistory = () => {
+    const newSession = createStoredSession();
+    const nextSessions = [newSession];
+    setSessions(nextSessions);
+    setActiveSessionId(newSession.id);
+    writeStorage(CHAT_SESSIONS_STORAGE_KEY, JSON.stringify(nextSessions));
+    writeStorage(ACTIVE_SESSION_STORAGE_KEY, newSession.id);
+  };
+
   return (
     <section className="view active">
       <div className="ai-chat-page">
         <aside className="ai-chat-sidebar" aria-label="Chat history">
           <div className="ai-chat-sidebar-header">
             <span>Chats</span>
-            <button type="button" onClick={handleNewChat}>
-              New
-            </button>
+            <div className="ai-chat-sidebar-actions">
+              <button type="button" onClick={handleNewChat}>
+                New
+              </button>
+              <button aria-label="Clear chat history" type="button" onClick={handleClearHistory}>
+                <Trash2 aria-hidden="true" size={14} strokeWidth={2.2} />
+              </button>
+            </div>
           </div>
           <div className="ai-chat-history-list">
             {sessions.map((storedSession) => (
@@ -122,7 +143,7 @@ export function AiChatView({ chatConfig }: AiChatViewProps) {
               <span className={`global-chat-status ${chatConfig.enabled ? "online" : "offline"}`}>
                 {chatConfig.enabled ? "Online" : "Offline"}
               </span>
-              <span className="ai-chat-model-name">{localModelName}</span>
+              <span className="ai-chat-model-name">{displayModelName}</span>
             </div>
           </div>
           <ChatConversation
@@ -134,13 +155,21 @@ export function AiChatView({ chatConfig }: AiChatViewProps) {
                 <p>Start with a practical portfolio question.</p>
                 <div className="ai-chat-sample-prompts">
                   {samplePrompts.map((prompt) => (
-                    <button key={prompt} onClick={() => session.setInput(prompt)} type="button">
+                    <button
+                      disabled={session.loading || !chatConfig.enabled}
+                      key={prompt}
+                      onClick={() => {
+                        void session.sendMessage(prompt);
+                      }}
+                      type="button"
+                    >
                       {prompt}
                     </button>
                   ))}
                 </div>
               </div>
             }
+            followUpPrompts={followUpPrompts}
             placeholder="Ask about projects, AWS, backend work..."
           />
         </div>

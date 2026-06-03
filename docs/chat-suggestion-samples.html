@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Chat Suggestion Samples</title>
+    <style>
+      :root {
+        --primary: #111;
+        --secondary: #666;
+        --glass: rgba(255, 255, 255, 0.7);
+        --border: rgba(255, 255, 255, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 16% 82%, rgba(255, 209, 255, 0.68), transparent 34%),
+          radial-gradient(circle at 84% 12%, rgba(165, 199, 255, 0.76), transparent 35%),
+          radial-gradient(circle at 70% 72%, rgba(255, 234, 188, 0.42), transparent 30%),
+          #f8faff;
+        color: var(--primary);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      main {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 46px 0 72px;
+      }
+
+      header {
+        max-width: 760px;
+        margin-bottom: 26px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin-bottom: 8px;
+        font-size: 1.9rem;
+      }
+
+      header p {
+        color: var(--secondary);
+        line-height: 1.55;
+      }
+
+      .sample-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .sample {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.48);
+        box-shadow: 0 24px 70px rgba(80, 98, 130, 0.12);
+        backdrop-filter: saturate(180%) blur(22px);
+      }
+
+      .sample:last-child {
+        grid-column: 1 / -1;
+      }
+
+      .sample-copy {
+        padding: 20px 22px 0;
+      }
+
+      .sample-copy h2 {
+        margin-bottom: 6px;
+        font-size: 1rem;
+      }
+
+      .sample-copy p {
+        min-height: 42px;
+        color: var(--secondary);
+        font-size: 0.88rem;
+        line-height: 1.45;
+      }
+
+      .chat-card {
+        display: grid;
+        grid-template-rows: auto 1fr auto auto;
+        min-height: 360px;
+        margin: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.58);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.38);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        backdrop-filter: saturate(180%) blur(18px);
+      }
+
+      .chat-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 20px 14px;
+        border-bottom: 1px solid rgba(17, 17, 17, 0.06);
+      }
+
+      .chat-header strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 1rem;
+      }
+
+      .chat-header span {
+        color: var(--secondary);
+        font-size: 0.78rem;
+      }
+
+      .status {
+        color: #208a46;
+        font-size: 0.78rem;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .messages {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 18px 20px 28px;
+      }
+
+      .bubble {
+        max-width: 76%;
+        border-radius: 16px;
+        padding: 11px 15px;
+        font-size: 0.83rem;
+        line-height: 1.45;
+      }
+
+      .bubble.user {
+        align-self: flex-end;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-bottom-right-radius: 4px;
+        background: linear-gradient(135deg, rgba(31, 41, 55, 0.92), rgba(45, 61, 84, 0.84));
+        color: #fff;
+        box-shadow: 0 14px 30px rgba(45, 61, 84, 0.18);
+      }
+
+      .bubble.ai {
+        align-self: flex-start;
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-bottom-left-radius: 4px;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.72),
+          0 14px 30px rgba(80, 98, 130, 0.1);
+      }
+
+      .suggestions {
+        display: flex;
+        width: min(390px, calc(100% - 40px));
+        margin-left: auto;
+        flex-direction: column;
+        gap: 8px;
+        padding: 16px 20px 14px;
+      }
+
+      .suggestions button {
+        min-height: 46px;
+        border-radius: 15px;
+        padding: 12px 15px;
+        cursor: default;
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-align: left;
+        transition: transform 0.2s;
+      }
+
+      .input-row {
+        display: flex;
+        gap: 12px;
+        padding: 14px 20px 20px;
+      }
+
+      .input-row div {
+        flex: 1;
+        border-radius: 16px;
+        padding: 15px 16px;
+        background: rgba(255, 255, 255, 0.72);
+        color: #8a8a8a;
+        font-size: 0.84rem;
+      }
+
+      .input-row button {
+        width: 64px;
+        border: 0;
+        border-radius: 16px;
+        background: #8b8b8b;
+        color: #fff;
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .sample-1 .suggestions button {
+        border: 1px solid rgba(91, 95, 145, 0.24);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(231, 235, 255, 0.82)),
+          rgba(246, 247, 255, 0.78);
+        color: #25283a;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.92),
+          0 10px 22px rgba(58, 64, 105, 0.12);
+      }
+
+      .sample-2 .suggestions button {
+        border: 1px solid rgba(255, 255, 255, 0.74);
+        background: rgba(255, 255, 255, 0.72);
+        color: #2f333d;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.86),
+          0 12px 28px rgba(80, 98, 130, 0.12);
+      }
+
+      .sample-3 .suggestions button {
+        border: 1px solid rgba(31, 41, 55, 0.1);
+        background:
+          linear-gradient(135deg, rgba(250, 251, 255, 0.9), rgba(236, 241, 248, 0.82)),
+          rgba(255, 255, 255, 0.7);
+        color: #27313d;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.9),
+          0 8px 18px rgba(45, 61, 84, 0.1);
+      }
+
+      .sample-4 .suggestions button {
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06)),
+          rgba(31, 41, 55, 0.68);
+        color: rgba(255, 255, 255, 0.94);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.26),
+          0 12px 26px rgba(31, 41, 55, 0.16);
+        backdrop-filter: saturate(170%) blur(18px);
+      }
+
+      .sample-5 .suggestions button {
+        border: 1px solid rgba(86, 71, 54, 0.16);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 245, 226, 0.76)),
+          rgba(255, 255, 255, 0.7);
+        color: #342f28;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.88),
+          0 10px 22px rgba(86, 71, 54, 0.1);
+      }
+
+      @media (max-width: 820px) {
+        main {
+          padding-top: 28px;
+        }
+
+        .sample-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .sample:last-child {
+          grid-column: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>AI Chat Suggestion Samples</h1>
+        <p>Five possible textures for the suggested-question buttons above the send box. These are mockups only.</p>
+      </header>
+
+      <section class="sample-grid" aria-label="AI chat suggestion texture samples">
+        <article class="sample sample-1">
+          <div class="sample-copy">
+            <h2>1. Cool Lavender Glass</h2>
+            <p>Clearer than white glass, but softer than chat bubbles. Best if suggestions should feel distinct.</p>
+          </div>
+          <div class="chat-card">
+            <div class="chat-header"><div><strong>Portfolio AI</strong><span>Ask quick questions about project details.</span></div><div class="status">Online</div></div>
+            <div class="messages"><div class="bubble user">Me: Which project shows AWS best?</div><div class="bubble ai">AI: Shinseong.dev is the strongest AWS-focused project.</div></div>
+            <div class="suggestions"><button>Summarize the resume highlights</button><button>Show the tech stack highlights</button><button>Which project shows AWS best?</button></div>
+            <div class="input-row"><div>Ask about projects, AWS, backend work...</div><button>Send</button></div>
+          </div>
+        </article>
+
+        <article class="sample sample-2">
+          <div class="sample-copy">
+            <h2>2. Pure Frosted Glass</h2>
+            <p>Most consistent with the existing UI. Calm, but may need strong spacing to remain visible.</p>
+          </div>
+          <div class="chat-card">
+            <div class="chat-header"><div><strong>Portfolio AI</strong><span>Ask quick questions about project details.</span></div><div class="status">Online</div></div>
+            <div class="messages"><div class="bubble user">Me: Which project shows AWS best?</div><div class="bubble ai">AI: Shinseong.dev is the strongest AWS-focused project.</div></div>
+            <div class="suggestions"><button>Summarize the resume highlights</button><button>Show the tech stack highlights</button><button>Which project shows AWS best?</button></div>
+            <div class="input-row"><div>Ask about projects, AWS, backend work...</div><button>Send</button></div>
+          </div>
+        </article>
+
+        <article class="sample sample-3">
+          <div class="sample-copy">
+            <h2>3. Mist Card</h2>
+            <p>Light gray-blue card texture. Looks like a secondary action panel instead of chat history.</p>
+          </div>
+          <div class="chat-card">
+            <div class="chat-header"><div><strong>Portfolio AI</strong><span>Ask quick questions about project details.</span></div><div class="status">Online</div></div>
+            <div class="messages"><div class="bubble user">Me: Which project shows AWS best?</div><div class="bubble ai">AI: Shinseong.dev is the strongest AWS-focused project.</div></div>
+            <div class="suggestions"><button>Summarize the resume highlights</button><button>Show the tech stack highlights</button><button>Which project shows AWS best?</button></div>
+            <div class="input-row"><div>Ask about projects, AWS, backend work...</div><button>Send</button></div>
+          </div>
+        </article>
+
+        <article class="sample sample-4">
+          <div class="sample-copy">
+            <h2>4. Dark Mini Actions</h2>
+            <p>Very readable and clickable, but visually close to user messages. Stronger, less subtle.</p>
+          </div>
+          <div class="chat-card">
+            <div class="chat-header"><div><strong>Portfolio AI</strong><span>Ask quick questions about project details.</span></div><div class="status">Online</div></div>
+            <div class="messages"><div class="bubble user">Me: Which project shows AWS best?</div><div class="bubble ai">AI: Shinseong.dev is the strongest AWS-focused project.</div></div>
+            <div class="suggestions"><button>Summarize the resume highlights</button><button>Show the tech stack highlights</button><button>Which project shows AWS best?</button></div>
+            <div class="input-row"><div>Ask about projects, AWS, backend work...</div><button>Send</button></div>
+          </div>
+        </article>
+
+        <article class="sample sample-5">
+          <div class="sample-copy">
+            <h2>5. Warm Paper Glass</h2>
+            <p>Soft and friendly, but warmer than the chat UI. Good only if the page should feel less technical.</p>
+          </div>
+          <div class="chat-card">
+            <div class="chat-header"><div><strong>Portfolio AI</strong><span>Ask quick questions about project details.</span></div><div class="status">Online</div></div>
+            <div class="messages"><div class="bubble user">Me: Which project shows AWS best?</div><div class="bubble ai">AI: Shinseong.dev is the strongest AWS-focused project.</div></div>
+            <div class="suggestions"><button>Summarize the resume highlights</button><button>Show the tech stack highlights</button><button>Which project shows AWS best?</button></div>
+            <div class="input-row"><div>Ask about projects, AWS, backend work...</div><button>Send</button></div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

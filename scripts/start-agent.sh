@@ -24,6 +24,7 @@ COMPOSE_FILE="${COMPOSE_FILE:-${ROOT_DIR}/local_ai/harness/docker-compose.yml}"
 LOCAL_AI_BACKEND="${LOCAL_AI_BACKEND:-container}"
 CHAT_API_FUNCTION_NAME="${CHAT_API_FUNCTION_NAME:-${LOCAL_AI_FUNCTION_NAME:-}}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+LOCAL_MODEL_NAME="${LOCAL_MODEL_NAME:-Gemma 2B IT Q4_K_M}"
 
 require_var() {
   local name="$1"
@@ -36,15 +37,25 @@ require_var() {
 upload_chat_config() {
   local enabled="$1"
   local message="$2"
+  local model_name="${3:-}"
   local tmp_file
   tmp_file="$(mktemp)"
 
-  cat > "${tmp_file}" <<JSON
-{
-  "enabled": ${enabled},
-  "message": "${message}"
+  "${PYTHON_BIN}" - "${tmp_file}" "${enabled}" "${message}" "${model_name}" <<'PY'
+import json
+import sys
+
+target, enabled, message, model_name = sys.argv[1:5]
+payload = {
+    "enabled": enabled == "true",
+    "message": message,
 }
-JSON
+if model_name.strip():
+    payload["modelName"] = model_name.strip()
+with open(target, "w", encoding="utf-8") as fh:
+    json.dump(payload, fh, indent=2)
+    fh.write("\n")
+PY
 
   aws s3 cp "${tmp_file}" "s3://${FRONTEND_BUCKET}/${CHAT_CONFIG_KEY}" \
     --cache-control "${CHAT_CONFIG_CACHE_CONTROL}" \
@@ -175,7 +186,7 @@ launchctl print "gui/$(id -u)/${LAUNCHD_LABEL}" >/dev/null
 rm -f "${PID_FILE}"
 
 update_lambda_chatbot_enabled true
-upload_chat_config true "Chat is online."
+upload_chat_config true "Chat is online." "${LOCAL_MODEL_NAME}"
 invalidate_chat_config
 
 echo "Agent started via launchctl label ${LAUNCHD_LABEL}."

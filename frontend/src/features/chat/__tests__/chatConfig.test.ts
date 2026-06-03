@@ -9,12 +9,13 @@ describe("loadChatConfig", () => {
 
   it("loads enabled state from /chat-config.json", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ enabled: true, message: "Online" })),
+      new Response(JSON.stringify({ enabled: true, message: "Online", modelName: "Llama 3.2" })),
     );
 
     await expect(loadChatConfig()).resolves.toEqual({
       enabled: true,
       message: "Online",
+      modelName: "Llama 3.2",
     });
   });
 
@@ -26,6 +27,17 @@ describe("loadChatConfig", () => {
     await expect(loadChatConfig()).resolves.toEqual({
       enabled: false,
       message: "Chat is currently offline.",
+    });
+  });
+
+  it("ignores an empty model name", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ enabled: true, message: "Online", modelName: " " })),
+    );
+
+    await expect(loadChatConfig()).resolves.toEqual({
+      enabled: true,
+      message: "Online",
     });
   });
 });

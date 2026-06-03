@@ -15,7 +15,7 @@ export type ChatSession = {
   loading: boolean;
   error: string | null;
   setInput: (value: string) => void;
-  sendMessage: () => Promise<void>;
+  sendMessage: (messageOverride?: string) => Promise<void>;
 };
 
 type ChatSessionOptions = {
@@ -33,6 +33,7 @@ export function useChatSession(chatConfig: ChatConfig, options: ChatSessionOptio
   const typingTimer = useRef<number | null>(null);
   const abortController = useRef<AbortController | null>(null);
   const mounted = useRef(true);
+  const minimumAssistantDelayMs = 280;
 
   useEffect(() => {
     return () => {
@@ -84,8 +85,8 @@ export function useChatSession(chatConfig: ChatConfig, options: ChatSessionOptio
     });
   };
 
-  const sendMessage = async () => {
-    const trimmed = input.trim();
+  const sendMessage = async (messageOverride?: string) => {
+    const trimmed = (messageOverride ?? input).trim();
     if (!trimmed || loading || !chatConfig.enabled) {
       return;
     }
@@ -103,12 +104,14 @@ export function useChatSession(chatConfig: ChatConfig, options: ChatSessionOptio
       const response: ChatResponse = await postChat(trimmed, controller.signal);
 
       if (response.status === "DONE") {
+        await wait(minimumAssistantDelayMs, controller.signal);
         await appendAssistantMessage(response.message ?? "Processing complete.");
         return;
       }
 
       for await (const update of pollChat(response.requestId, controller.signal)) {
         if (update.status === "DONE") {
+          await wait(minimumAssistantDelayMs, controller.signal);
           await appendAssistantMessage(update.message || "Processing complete.");
           break;
         }
@@ -146,12 +149,31 @@ function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.reject(new DOMException("Aborted", "AbortError"));
+  }
+
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        window.clearTimeout(timer);
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
+}
+
 type ChatConversationProps = {
   chatConfig: ChatConfig;
   session: ChatSession;
   className?: string;
   emptyContent?: ReactNode;
   emptyOnlineMessage?: string;
+  followUpPrompts?: string[];
   modelLabel?: string;
   modelStatus?: "online" | "offline";
   placeholder?: string;
@@ -163,11 +185,13 @@ export function ChatConversation({
   className = "",
   emptyContent,
   emptyOnlineMessage = "No messages yet. Send a message to start the conversation!",
+  followUpPrompts = [],
   modelLabel,
   modelStatus = "online",
   placeholder = "Type a message...",
 }: ChatConversationProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const lastAssistantIndex = getLastAssistantIndex(session.messages);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
@@ -196,9 +220,11 @@ export function ChatConversation({
         )}
 
         {session.messages.map((message, index) => (
-          <div className={`chat-bubble ${message.role}`} key={`${message.role}-${index}`}>
-            <strong>{message.role === "user" ? "Me: " : "AI: "}</strong>
-            {message.content}
+          <div className={`chat-message-group ${message.role}`} key={`${message.role}-${index}`}>
+            <div className={`chat-bubble ${message.role}`}>
+              <strong>{message.role === "user" ? "Me: " : "AI: "}</strong>
+              {message.content}
+            </div>
           </div>
         ))}
 
@@ -213,6 +239,23 @@ export function ChatConversation({
 
       {session.error && <div className="chat-error" role="alert">{session.error}</div>}
 
+      {lastAssistantIndex >= 0 && !session.loading && followUpPrompts.length > 0 && (
+        <div className="chat-followups" aria-label="Suggested follow-up questions">
+          {followUpPrompts.map((prompt) => (
+            <button
+              disabled={!chatConfig.enabled}
+              key={prompt}
+              onClick={() => {
+                void session.sendMessage(prompt);
+              }}
+              type="button"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="chat-input-area">
         <textarea
           className="chat-input"
@@ -225,7 +268,9 @@ export function ChatConversation({
         />
         <button
           className="chat-send-btn"
-          onClick={session.sendMessage}
+          onClick={() => {
+            void session.sendMessage();
+          }}
           disabled={session.loading || !session.input.trim() || !chatConfig.enabled}
           type="button"
         >
@@ -234,4 +279,14 @@ export function ChatConversation({
       </div>
     </div>
   );
+}
+
+function getLastAssistantIndex(messages: ChatMessage[]): number {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === "assistant") {
+      return index;
+    }
+  }
+
+  return -1;
 }

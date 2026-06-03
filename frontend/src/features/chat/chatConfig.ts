@@ -1,6 +1,7 @@
 export type ChatConfig = {
   enabled: boolean;
   message: string;
+  modelName?: string;
 };
 
 const offlineConfig: ChatConfig = {
@@ -19,6 +20,10 @@ export async function loadChatConfig(): Promise<ChatConfig> {
     }
 
     const payload = (await response.json()) as Partial<ChatConfig>;
+    const modelName = typeof payload.modelName === "string" && payload.modelName.trim()
+      ? payload.modelName.trim()
+      : undefined;
+
     return {
       enabled: payload.enabled === true,
       message: typeof payload.message === "string" && payload.message.trim()
@@ -26,6 +31,7 @@ export async function loadChatConfig(): Promise<ChatConfig> {
         : payload.enabled === true
           ? "Chat is online."
           : offlineConfig.message,
+      ...(modelName ? { modelName } : {}),
     };
   } catch {
     return offlineConfig;

@@ -234,6 +234,65 @@ describe("App", () => {
     expect(localStorage.getItem("portfolio-ai-chat-sessions")).toContain("Tell me about NoraHangul");
   });
 
+  it("sends starter and follow-up prompt chips immediately", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/chat-config.json")) {
+        return new Response(JSON.stringify({ enabled: true }));
+      }
+      if (url.endsWith("/health")) {
+        return new Response(JSON.stringify({ status: "ok", service: "portfolio-api" }));
+      }
+      if (url.endsWith("/profile")) {
+        return new Response(JSON.stringify(profile));
+      }
+      if (url.endsWith("/chat")) {
+        const body = JSON.parse(String(init?.body ?? "{}")) as { message?: string };
+        return new Response(
+          JSON.stringify({
+            requestId: `request-${fetchMock.mock.calls.length}`,
+            status: "DONE",
+            message: `Answer for ${body.message}`,
+          }),
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    const conversation = screen.getByLabelText("Portfolio AI conversation");
+    await user.click(within(conversation).getByRole("button", { name: "What projects should I look at first?" }));
+
+    await waitFor(() => {
+      expect(conversation.textContent).toContain("Answer for What projects should I look at first?");
+    });
+    const followUps = conversation.querySelector(".chat-followups");
+    const chatMessages = conversation.querySelector(".chat-messages");
+    const inputArea = conversation.querySelector(".chat-input-area");
+    expect(followUps).not.toBeNull();
+    expect(chatMessages).not.toBeNull();
+    expect(inputArea).not.toBeNull();
+    expect(chatMessages?.contains(followUps as Node)).toBe(false);
+    expect(Boolean((followUps as Node).compareDocumentPosition(inputArea as Node) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    const firstPost = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/chat"));
+    expect(JSON.parse(String(firstPost?.[1]?.body))).toMatchObject({
+      message: "What projects should I look at first?",
+    });
+
+    await user.click(within(conversation).getByRole("button", { name: "Which project shows AWS best?" }));
+
+    await waitFor(() => {
+      const chatPosts = fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/chat"));
+      expect(chatPosts).toHaveLength(2);
+      expect(JSON.parse(String(chatPosts[1][1]?.body))).toMatchObject({
+        message: "Which project shows AWS best?",
+      });
+    });
+  });
+
   it("does not pile up empty AI chat sessions when starting new chats", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -244,6 +303,36 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "New" }));
 
     expect(screen.getAllByRole("button", { name: "New chat" })).toHaveLength(1);
+  });
+
+  it("clears local AI chat history", async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+    localStorage.setItem(
+      "portfolio-ai-chat-sessions",
+      JSON.stringify([
+        {
+          id: "stored-chat",
+          title: "Stored chat",
+          messages: [{ role: "user", content: "Stored question" }],
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]),
+    );
+    localStorage.setItem("portfolio-ai-chat-active-session", "stored-chat");
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "AI Chat" }));
+    expect(screen.getByRole("button", { name: "Stored question" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Clear chat history" }));
+
+    expect(screen.queryByRole("button", { name: "Stored question" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "New chat" })).toHaveLength(1);
+    expect(localStorage.getItem("portfolio-ai-chat-sessions")).toContain("New chat");
+    expect(localStorage.getItem("portfolio-ai-chat-active-session")).toBeTruthy();
   });
 
   it("opens the AI Chat tab and sends a message", async () => {

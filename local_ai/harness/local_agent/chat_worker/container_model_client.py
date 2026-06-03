@@ -61,8 +61,9 @@ def _build_payload(user_message: str) -> dict[str, Any]:
     return {
         "model": "local-model",
         "messages": [{"role": "user", "content": user_message}],
-        "max_tokens": 256,
+        "max_tokens": 80,
         "temperature": 0.7,
+        "chat_template_kwargs": {"enable_thinking": False},
     }
 
 

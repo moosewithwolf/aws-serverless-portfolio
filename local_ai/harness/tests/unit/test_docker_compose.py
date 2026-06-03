@@ -167,3 +167,18 @@ def test_model_volume_mount_is_read_only(compose_config):
         assert ":ro" in vol_str, (
             f"Model mount must be read-only, got: {vol_str}"
         )
+
+
+def test_model_path_is_configurable_with_env_vars(compose_config):
+    """Model directory and file should be configurable without editing compose."""
+    services = compose_config.get("services", {})
+    model_server = services.get("model-server", {})
+    volumes = model_server.get("volumes", []) or []
+    command = str(model_server.get("command", ""))
+
+    assert any("${LOCAL_MODEL_DIR:-" in str(volume) for volume in volumes), (
+        "Model directory should use LOCAL_MODEL_DIR with a default"
+    )
+    assert "${LOCAL_MODEL_FILE:-" in command, (
+        "Model file should use LOCAL_MODEL_FILE with a default"
+    )

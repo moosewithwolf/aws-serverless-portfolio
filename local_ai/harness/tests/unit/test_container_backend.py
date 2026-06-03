@@ -54,6 +54,26 @@ def test_successful_chat_completion_parses_assistant_message():
     assert result == "This portfolio uses S3, CloudFront, and Lambda."
 
 
+def test_chat_completion_uses_short_response_budget():
+    """Portfolio chat should keep model responses short for lower latency."""
+    mock_resp = _mock_response(200, {
+        "choices": [{
+            "message": {
+                "role": "assistant",
+                "content": "Short answer.",
+            }
+        }]
+    })
+
+    with patch("local_agent.chat_worker.container_model_client.requests.post", return_value=mock_resp) as mock_post:
+        backend = ContainerModelBackend()
+        backend.generate("What services are used?")
+
+    payload = mock_post.call_args.kwargs["json"]
+    assert payload["max_tokens"] == 80
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+
+
 # ---------------------------------------------------------------------------
 # Timeout / connection failure
 # ---------------------------------------------------------------------------
