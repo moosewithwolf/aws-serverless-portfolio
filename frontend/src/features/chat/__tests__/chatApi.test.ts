@@ -279,15 +279,19 @@ describe("pollChat runtime validation", () => {
     await expect(gen.next()).rejects.toThrow("Invalid chat status response");
   });
 
-  it("rejects if response message is missing", async () => {
+  it("accepts PENDING without a message", async () => {
     fetchSpy.mockImplementationOnce(async () =>
       mockResponse(true, 200, async () => ({
         status: "PENDING",
       })),
     );
 
-    const gen = pollChat("req-missing-message");
-    await expect(gen.next()).rejects.toThrow("Invalid chat status response");
+    const gen = pollChat("req-pending-without-message");
+    const result = await gen.next();
+
+    expect(result.done).toBe(false);
+    expect(result.value.status).toBe("PENDING");
+    expect(result.value.message).toBeUndefined();
   });
 
   it("accepts DONE with a string message and completes", async () => {

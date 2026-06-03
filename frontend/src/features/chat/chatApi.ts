@@ -28,7 +28,7 @@ export type ChatResponse = {
 
 export type ChatStatusResponse = {
   status: "PENDING" | "DONE" | "ERROR";
-  message: string;
+  message?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -60,6 +60,9 @@ function isValidChatStatusResponse(data: unknown): data is ChatStatusResponse {
   const obj = data as Record<string, unknown>;
   const status = obj.status;
   if (!isValidChatStatus(status)) return false;
+  if (status === "PENDING") {
+    return !("message" in obj) || typeof obj.message === "string";
+  }
   return typeof obj.message === "string";
 }
 
