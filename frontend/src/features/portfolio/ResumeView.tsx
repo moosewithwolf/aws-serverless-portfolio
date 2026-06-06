@@ -6,6 +6,17 @@ type ResumeViewProps = {
 };
 
 export function ResumeView({ profile }: ResumeViewProps) {
+  const educationItems = profile.educationHistory ?? [
+    {
+      ...profile.education,
+      details: [
+        "4.0 GPA",
+        "President's Honour List: Fall 2025, Winter 2025, Summer 2025",
+        "Marcus Udokang Computer Science Award (2026)",
+      ],
+    },
+  ];
+
   return (
     <section className="view active">
       <div className="resume-card">
@@ -23,19 +34,24 @@ export function ResumeView({ profile }: ResumeViewProps) {
 
           <div className="resume-section">
             <h3>Education / Awards</h3>
-            <div className="resume-item">
-              <div className="resume-header">
-                <strong>{profile.education.program}</strong>
-                <span className="date">{profile.education.status}</span>
+            {educationItems.map((education) => (
+              <div className="resume-item" key={`${education.program}-${education.status}`}>
+                <div className="resume-header">
+                  <strong>{education.program}</strong>
+                  <span className="date">{education.status}</span>
+                </div>
+                <div className="resume-sub">
+                  {education.school} - {education.location}
+                </div>
+                {education.details && education.details.length > 0 && (
+                  <ul className="resume-list">
+                    {education.details.map((detail) => (
+                      <li key={detail}>{detail}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              <div className="resume-sub">
-                {profile.education.school} - {profile.education.location} | 4.0 GPA
-              </div>
-              <ul className="resume-list">
-                <li>President’s Honour List: Fall 2025, Winter 2025, Summer 2025</li>
-                <li>Marcus Udokang Computer Science Award (2026)</li>
-              </ul>
-            </div>
+            ))}
           </div>
 
           <div className="resume-section">

@@ -4,6 +4,14 @@ export type Project = {
   description: string;
 };
 
+export type EducationItem = {
+  program: string;
+  school: string;
+  location: string;
+  status: string;
+  details?: string[];
+};
+
 export type Profile = {
   name: string;
   headline: string;
@@ -18,6 +26,7 @@ export type Profile = {
     location: string;
     status: string;
   };
+  educationHistory?: EducationItem[];
   aiRoadmap: {
     runtime: string;
     status: string;

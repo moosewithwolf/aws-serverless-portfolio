@@ -50,7 +50,7 @@ export const projectLinks: Record<string, { demo?: string; github?: string }> = 
 export const fallbackProfile: Profile = {
   name: "Shinseong Kim",
   headline:
-    "A Computer Programming student building full-stack projects with React, AWS serverless, and local LLM AI for hobby.",
+    "A Computer Programming student focused on backend-oriented full-stack development, AWS serverless architecture, and end-to-end application architecture and flow, while exploring local AI models and AI agents through personal projects.",
   summary:
     "Computer Programming and Analysis student focused on AWS, serverless systems, and practical full-stack engineering.",
   email: "skim570@myseneca.ca",
@@ -107,6 +107,26 @@ export const fallbackProfile: Profile = {
     location: "Toronto, ON",
     status: "2024 - Present",
   },
+  educationHistory: [
+    {
+      program: "Computer Programming and Analysis",
+      school: "Seneca Polytechnic",
+      location: "Toronto, ON",
+      status: "2024 - Present",
+      details: [
+        "4.0 GPA",
+        "President's Honour List: Fall 2025, Winter 2025, Summer 2025",
+        "Marcus Udokang Computer Science Award (2026)",
+      ],
+    },
+    {
+      program: "Bachelor of Business Administration",
+      school: "Academic Credit Bank System",
+      location: "Korea",
+      status: "2015.01 - 2016.02",
+      details: ["Major in Business Administration"],
+    },
+  ],
   aiRoadmap: {
     runtime: "llama.cpp",
     status: "planned-v2",
